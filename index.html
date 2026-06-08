@@ -855,10 +855,10 @@ function buildCard(w, idx) {
   const href = w.ytId ? `https://www.youtube.com/watch?v=${w.ytId}` : (w.url || "#");
   let thumbHTML = '';
   if (w.img) {
-    thumbHTML = `<img class="thumb-img" src="${w.img}" alt="${w.title}" loading="lazy">`;
+    thumbHTML = `<img class="thumb-img" src="${w.img}" alt="${w.title}" data-src="${w.img}" onerror="retryImg(this)">`;
   } else if (w.ytId) {
     const ytThumb = `https://img.youtube.com/vi/${w.ytId}/mqdefault.jpg`;
-    thumbHTML = `<img class="thumb-img" src="${ytThumb}" alt="${w.title}" loading="lazy">`;
+    thumbHTML = `<img class="thumb-img" src="${ytThumb}" alt="${w.title}" data-src="${ytThumb}" onerror="retryImg(this)">`;
   } else {
     thumbHTML = `<div class="thumb-placeholder ${w.color || 'c1'}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg></div>`;
@@ -886,6 +886,29 @@ function buildCard(w, idx) {
     </a>`;
 }
 
+/* ---- 画像読み込みリトライ処理 ---- */
+const IMG_MAX_RETRY = 5;
+const IMG_RETRY_BASE_MS = 600;
+function retryImg(img) {
+  const retries = parseInt(img.dataset.retries || '0', 10);
+  if (retries < IMG_MAX_RETRY) {
+    img.dataset.retries = retries + 1;
+    const delay = IMG_RETRY_BASE_MS * Math.pow(1.6, retries);
+    setTimeout(() => {
+      const src = img.dataset.src || img.src.split('?')[0];
+      img.src = src + '?r=' + retries;
+    }, delay);
+  } else {
+    // リトライ上限到達 → プレースホルダーSVGに差し替え（壊れたアイコンを非表示）
+    img.onerror = null;
+    img.style.display = 'none';
+    const placeholder = document.createElement('div');
+    placeholder.className = 'thumb-placeholder c1';
+    placeholder.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5,3 19,12 5,21"/></svg>';
+    if (img.parentNode) img.parentNode.appendChild(placeholder);
+  }
+}
+
 const PAGE_SIZE = 60;
 let currentFilter = 'all';
 let currentPage = 1;
@@ -904,8 +927,15 @@ function render() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const pageItems = filtered.slice(start, start + PAGE_SIZE);
 
-  document.getElementById('worksGrid').innerHTML =
-    pageItems.map(({ w, i }) => buildCard(w, i)).join('');
+  const grid = document.getElementById('worksGrid');
+  grid.innerHTML = pageItems.map(({ w, i }) => buildCard(w, i)).join('');
+
+  // DOMに追加後、画像ロードを能動的に試みる（エラー時はretryImgが自動リトライ）
+  grid.querySelectorAll('img.thumb-img').forEach(img => {
+    if (img.complete && img.naturalWidth === 0) {
+      retryImg(img);
+    }
+  });
 
   const pagination = document.getElementById('pagination');
   const prevBtn = document.getElementById('prevBtn');
