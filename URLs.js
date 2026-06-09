@@ -23,5 +23,7 @@ const URL_ITEMS = [
   { label: "Bluesky",       url: "https://bsky.app/profile/yomitanakane.bsky.social" },
   { label: "YouTube Sub",   url: "https://www.youtube.com/@YomitanSub" },
   { label: "X Sub",         url: "https://x.com/yomitansub" },
+  { label: "JOYSOUND",      url: "https://www.joysound.com/web/search/artist?match=1&keyword=%E8%AA%AD%E8%B0%B7%E3%81%82%E3%81%8B%E3%81%AD" },
+  { label: "DAM",           url: "https://www.clubdam.com/karaokesearch/?keyword=%E8%AA%AD%E8%B0%B7%E3%81%82%E3%81%8B%E3%81%AD" },
   { label: "旧HP",          url: "https://yomitanakane.myportfolio.com" },
 ];
