@@ -19,7 +19,7 @@ const URL_ITEMS = [
   { label: "LINEスタンプ",  url: "https://store.line.me/stickershop/author/4734224/ja" },
   { label: "SUZURI",        url: "https://suzuri.jp/yomitan" },
   { label: "Blog",          url: "https://yomitanakane.hatenablog.com/" },
-  { label: "FEAT",          url: "https://feat.kurogo.studio/yomitanakane" },
+  { label: "MisterDonut",          url: "https://www.misterdonut.jp/" },
   { label: "Bluesky",       url: "https://bsky.app/profile/yomitanakane.bsky.social" },
   { label: "YouTube Sub",   url: "https://www.youtube.com/@YomitanSub" },
   { label: "X Sub",         url: "https://x.com/yomitansub" },
