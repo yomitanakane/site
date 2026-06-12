@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+　{ title: "已己巳己 / 重音テト", tag: "楽曲", year:"2026", url: "https://youtu.be/SNlR_U4CoPA?si=DjziOwdG6DqMp52x", img:"images/Ikomiki.png"},
   { title: "読谷あかねのリミナルスペースお散歩日記", tag: "その他", year:"2026", url: "https://youtu.be/B-nUHn-z9pk", img:"images/Liminal.png"},
   { title: "Vocation Chiba Vol.115", tag: "出演", year:"2026", url: "https://twipla.jp/events/727217", img:"images/Vocachiba.png"},
   { title: "#トモダチコレクションわくわく生活の服を着せて描く",  tag: "イラスト", year: "2026", url: "https://x.com/yomitanakane/status/2060283503816663067?s=20", img: "images/Tomocolle.png" },
