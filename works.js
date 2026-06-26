@@ -72,7 +72,7 @@ const WORKS = [
   { title: "テクノポップ・有機・シンセサイザーちゃん『エレクトリック・ミラージュ・感情』", tag: "映像", year: "2025", ytId: "03T0i2UpRw", img: "images/Electric.png",
 	detail: { detail: "一部編集を担当", credit: "えいりな刃物,廣井結実,Cube,ミジンコ,荒木悟" } },
   { title: "消えないファイル / 重音テト",  tag: "楽曲", year: "2025", ytId: "Pea-FqG0IbY", img: "images/Kienai.png" },
-
+  { title: "2代目閻魔300万再生記念イラスト",  tag: "イラスト", year: "2025", url: "https://x.com/yomitanakane/status/1973692034696491111?s=20", img: "images/2Daime_3m.png" },
   { title: "Yomitan-Reference", tag: "その他", year:"2025", url: "https://scrapbox.io/Yomitan-Reference/", img:"images/Reference.png" ,
 	detail:{detail:"Cosenseページ"}},
 
