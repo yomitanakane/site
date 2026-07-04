@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+  { title: "〇", tag: "その他", year:"2026", ytID: "sRD6CE_c6H8", img:"images/Circle.png"},
   { title: "雨良『ぽい』", tag: "映像", year:"2026", ytId: "bNPzF89addE", img:"images/Poi.png"},
 　{ title: "已己巳己 / 重音テト", tag: "楽曲", year:"2026", url: "https://youtu.be/SNlR_U4CoPA?si=DjziOwdG6DqMp52x", img:"images/Ikomiki.png"},
   { title: "読谷あかねのリミナルスペースお散歩日記", tag: "その他", year:"2026", url: "https://youtu.be/B-nUHn-z9pk", img:"images/Liminal.png"},
