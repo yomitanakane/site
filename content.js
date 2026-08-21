@@ -8,16 +8,28 @@
    CONTACT
    ============================================================ */
 const CONTACT_CONTENT = {
-  rows: [
+  topRows: [
     { label: "E-mail", value: "akaneyomitan@gmail.com", email: "akaneyomitan@gmail.com" },
     { label: "Discord ID", value: "yomitanakane" },
-    { label: "", value: "" },
+  ],
+  discordNote: "XのDMは通知が届かない場合が多いのでご遠慮ください。",
+  infoAccordion: [
+    {
+      title: "YouTubeの字幕を提供していただける方へ",
+      body: "上記連絡先までファイルをご送付いただけますと幸いです。字幕内に翻訳者のクレジットを入れるようお願いします。"
+    },
+    {
+      title: "二次創作や二次利用について",
+      body: "GUIDELINEページをご確認ください。"
+    },
+  ],
+  profileRows: [
     { label: "Profile", value: "読谷あかね / Yomitan Akane" },
-    { label: "", value: "2021年から漫画描きとしての活動を開始。" },
-    { label: "", value: "自主制作『泉』を機に映像制作業を開始し、2023年に株式会社一二三に所属。" },
-    { label: "", value: "同年に『散り散り』を投稿、合成音声楽曲の制作を趣味で行う。" },
-    { label: "", value: "2025年に作家のえいりな刃物と結婚、また株式会社一二三を退所。" },
-    { label: "", value: "現在はフリーランスとして、映像制作・楽曲制作・イラスト制作・DJ出演などの活動をしています。" },
+    { label: "", value: "2021年から漫画描きとしての活動を開始。", profileLine: true },
+    { label: "", value: "自主制作『泉』を機に映像制作業を開始し、2023年に株式会社一二三に所属。", profileLine: true },
+    { label: "", value: "同年に『散り散り』を投稿、合成音声楽曲の制作を趣味で行う。", profileLine: true },
+    { label: "", value: "2025年に作家のえいりな刃物と結婚、また株式会社一二三を退所。", profileLine: true },
+    { label: "", value: "現在はフリーランスとして、映像制作・楽曲制作・イラスト制作・DJ出演などの活動をしています。", profileLine: true },
   ]
 };
 
@@ -100,7 +112,7 @@ const QA_ITEMS = [
     container.innerHTML = `
       <h2>GUIDELINE</h2>
 
-      <div class="gl-section">
+      <div class="gl-section gl-box">
         <div class="gl-heading">二次創作ガイドライン</div>
         <p class="gl-body" style="font-size:20px; font-weight:700; margin-bottom:14px;">基本的に何でもOKです。大歓迎！</p>
         <p class="gl-body">非商用もしくは同人の範疇であれば連絡不要です。</p>
@@ -112,7 +124,7 @@ const QA_ITEMS = [
         <p class="gl-body">大規模な営利目的もしくは法人での取扱の場合、CONTACTページに記載の連絡先までご連絡ください。</p>
       </div>
 
-      <div class="gl-section">
+      <div class="gl-section gl-box">
         <div class="gl-heading">禁止事項</div>
         <ul class="gl-forbidden">
           <li>そのままの形での転載、音源等各種データの再配布</li>
@@ -122,7 +134,7 @@ const QA_ITEMS = [
         </ul>
       </div>
 
-      <div class="gl-section">
+      <div class="gl-section gl-box">
         <div class="gl-heading">ハッシュタグ &amp; コミュニティ</div>
         <p class="gl-body">Xのハッシュタグとして <strong>#Yomitart</strong> をご用意しています。是非ご利用ください。</p>
         <div class="gl-hashtag-row">
@@ -145,21 +157,39 @@ const QA_ITEMS = [
     `;
   }
 
+  function renderContactRow(row) {
+    const val = row.email
+      ? `<a href="mailto:${row.email}">${row.value}</a>`
+      : row.value;
+    const cls = row.profileLine ? "contact-row profile-line" : "contact-row";
+    return `
+      <div class="${cls}">
+        <span class="contact-label">${row.label || ""}</span>
+        <span class="contact-value">${val}</span>
+      </div>`;
+  }
+
   function injectContact() {
     const container = document.getElementById("contact-content");
     if (!container) return;
-    const rows = CONTACT_CONTENT.rows
-      .map(row => {
-        const val = row.email
-          ? `<a href="mailto:${row.email}">${row.value}</a>`
-          : row.value;
-        return `
-          <div class="contact-row">
-            <span class="contact-label">${row.label || ""}</span>
-            <span class="contact-value">${val}</span>
-          </div>`;
-      })
-      .join("");
+
+    const topRows = CONTACT_CONTENT.topRows.map(renderContactRow).join("");
+    const discordNote = CONTACT_CONTENT.discordNote
+      ? `<div class="contact-note">${CONTACT_CONTENT.discordNote}</div>`
+      : "";
+
+    // Info アコーディオン（Profileより上・デフォルト閉じ・ボタン風）
+    let infoSection = "";
+    if (CONTACT_CONTENT.infoAccordion && CONTACT_CONTENT.infoAccordion.length > 0) {
+      const items = CONTACT_CONTENT.infoAccordion.map(item => `
+        <details class="contact-info-details">
+          <summary class="contact-info-summary">${item.title}</summary>
+          <div class="contact-info-body">${item.body}</div>
+        </details>`).join("");
+      infoSection = `<div class="contact-info-accordion">${items}</div>`;
+    }
+
+    const profileRows = CONTACT_CONTENT.profileRows.map(renderContactRow).join("");
 
     // URLsセクション（URLs.js の URL_ITEMS を使用）
     let urlsSection = "";
@@ -174,7 +204,7 @@ const QA_ITEMS = [
         </details>`;
     }
 
-    // Logセクション（Log.js の LOG_ITEMS を使用）
+    // Logセクション（Log.js の LOG_ITEMS を使用、デフォルト閉じ）
     let logSection = "";
     if (typeof LOG_ITEMS !== "undefined" && LOG_ITEMS.length > 0) {
       const logRows = LOG_ITEMS.map(item => `
@@ -184,13 +214,22 @@ const QA_ITEMS = [
         </div>
       `).join("");
       logSection = `
-        <details class="contact-urls-details" open>
+        <details class="contact-urls-details">
           <summary class="contact-urls-summary">Log</summary>
           <div class="contact-log-list">${logRows}</div>
         </details>`;
     }
 
-    container.innerHTML = `<h2>CONTACT</h2>${rows}${urlsSection}${logSection}`;
+    container.innerHTML = `
+      <h2>CONTACT</h2>
+      <div class="contact-box">
+        <div class="contact-box-body">${topRows}${discordNote}</div>
+        ${infoSection}
+      </div>
+      <div class="contact-box">
+        <div class="contact-box-body">${profileRows}</div>
+      </div>
+      ${urlsSection}${logSection}`;
   }
 
   if (document.readyState === "loading") {
