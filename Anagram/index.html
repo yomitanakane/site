@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>答えが激ムズのアナグラム</title>
+<meta name="description" content="答えが一般的に知られていない単語になるアナグラムクイズです。" />
+<meta property="og:title" content="答えが激ムズのアナグラム" />
+<meta property="og:description" content="答えが一般的に知られていない単語になるアナグラムクイズです。" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="答えが激ムズのアナグラム" />
+<meta name="twitter:description" content="答えが一般的に知られていない単語になるアナグラムクイズです。" />
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADsklEQVR4AexWOy9sURT+1njH+9UpNCLRkCAKQcVfUIhHQiVIaAQJUQgRiWgQGvSiEqL0ShQ6HULjLZ5BvK9vjT05954zY85cuZp7Mt+sffZee61vr7322sdzdHT0/pPw4Ief/wT+SQTe39/9brSNAJVvb29xcnKC09NTnJ+f4+LiAldXV4rLy0sEwtWnHiX1aOPw8BC0+fb2ZiNiI/D6+orh4WEUFBQo8vPzYYXp9yetumxTr6ioCH19fXh8fAQXaGVhI0AFkiCen5/x9PSkE+/v7/Hw8ADKQDA6lARt0Nbc3BwWFxfBKNCHIWEjYAasSqZtpNFxkkbHSKPDLWhra8POzs5vUbAREBFER0cjPj4eCQkJisTERCQlJQUNzvV4bKYRGRmJ6+trw0mlTSssLAzNzc1YX1/3YW1tDQarq6sgVlZWYAXH+b68vIyenh7Qjnr4/IuKisLQ0JDmk4h89gI2AiKC2NhYpKamIiUlxYfk5GQYMLwHBwcwOD4+RkREhM5bWlpCZ2cnXl5eYB6Otba2ory8XImJiBmyE+CIiEDEGRxfWFhATU0NqqurFXV1ddjY2MDk5CR6e3vBxCNJEUF4eDg6OjrQ0NAARoHzrfBYX4Jp0/Dd3R3Ozs58YM3gMRscHNTzTh0Rr3NuZ319PWJiYnRRf/pwTYAGeDQpDZhchIg3auxnDjAXmpqadHtEhN02uCbA1VkzWUR07wcGBjAxMYGsrCzExcWhu7tbt8nfyg2TkAjs7u6a+SqZtGlpaaioqMD09DSmpqbUOfdfxHnlOvHjzzUBVrWtra2Pqd6fiDcCSR91gmHPzMxEcXGxJpxIYOe04IoAw39zc6OXFNs0QDDMLF5su4VrAvPz82AUjCMR0UuLqzd9bqQrAky+mZkZWFfPkltbW+t4xIIhEjQBOmUB2t/f9xEQEeTk5CAjIyMYX446QRHgFbq3t4fx8XG9mo0lVraWlhZbeTXjwcgvCdA5a35lZSV4/BgJGhYR5OXloaSkJOTw005AAkw23oqNjY168ZAMJ4kIeEW3t7drEWJfqHAkwFXyQhkbGwMTbHNz07fvdMTQj4yMoLCwEExC9oUKRwI0tr29rfc+ifCdEBEts11dXSgrK/tr57Tpl0B2djZGR0f1imV950rT09O13vMqZhREvq50dBIIjgRERDObHyT8iJidnUV/f7/W+NLSUv20wjc9jgSstkVEv4qqqqqQm5v7LWG32g+KAMPPUksp8vdhd0XAqhxK+6s5vwAAAP//8aUEiQAAAAZJREFUAwAvc1DftFOQHgAAAABJRU5ErkJggg==" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== スタート画面 ===================== -->
+<section id="screen-start" class="screen">
+  <div class="container">
+    <h1 class="title">答えが激ムズのアナグラム</h1>
+    <p class="description">
+      答えが一般的に知られていない単語になるアナグラムクイズです。
+      <br />
+      勘で答えるもよし、知識で答えてもよし。
+      <br />
+      ランダムな5問が出題され、タイムが計測されます。
+      <br />
+      ヒントボタンを押すと位置の正しい文字が緑色になります。
+      <br />
+      配信での使用も可能です。ご自由にお取り扱いください。
+    </p>
+    <button id="btn-start" class="btn btn-primary">スタート</button>
+  </div>
+  <p class="credit">
+    クレジット　<a href="https://yomitanakane.com/" target="_blank" rel="noopener noreferrer">読谷あかね</a>
+  </p>
+</section>
+
+<!-- ===================== 問題画面 ===================== -->
+<section id="screen-quiz" class="screen hidden">
+  <div class="container">
+    <div class="quiz-header">
+      <span class="quiz-progress"><span id="question-index">1</span> / <span id="question-total">5</span> 問</span>
+      <span class="quiz-timer" id="timer">0s</span>
+    </div>
+
+    <p class="quiz-prompt" id="quiz-prompt"></p>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="quiz-controls">
+      <button id="btn-hint" class="btn btn-secondary">ヒント</button>
+      <button id="btn-giveup" class="btn btn-secondary">ギブアップ</button>
+    </div>
+
+    <div class="result-box hidden" id="answer-box">
+      <p class="answer-mark" id="answer-mark">正解</p>
+      <p class="answer-word" id="answer-word"></p>
+      <p class="answer-explanation" id="answer-explanation"></p>
+      <div class="answer-controls">
+        <button id="btn-search" class="btn btn-primary hidden">答えのワードを検索</button>
+        <button id="btn-next" class="btn btn-primary">次の問題へ</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 結果画面 ===================== -->
+<section id="screen-result" class="screen hidden">
+  <div class="container">
+    <h2 class="title">結果</h2>
+    <p class="result-nohint hidden" id="result-nohint">ノーヒントクリア</p>
+    <p class="result-score" id="result-score">5問中0問正解</p>
+    <p class="result-time-label">5問クリアタイム</p>
+    <p class="result-time" id="result-time">0s</p>
+
+    <button id="btn-share" class="btn btn-secondary">Xでシェアする</button>
+
+    <table class="review-table" id="review-table">
+      <thead>
+        <tr>
+          <th>答え</th>
+          <th>説明</th>
+        </tr>
+      </thead>
+      <tbody id="review-table-body"></tbody>
+    </table>
+
+    <button id="btn-home" class="btn btn-primary">ホーム画面に戻る</button>
+    <button id="btn-secret" class="btn-secret-trigger" aria-label="secret" tabindex="-1"></button>
+  </div>
+</section>
+
+<!-- ===================== 全問題の一覧(隠しページ) ===================== -->
+<div class="secret-overlay hidden" id="secret-overlay">
+  <div class="secret-panel">
+    <div class="secret-header">
+      <h3>全問題の一覧</h3>
+      <button id="btn-secret-close" class="btn-close" aria-label="閉じる">×</button>
+    </div>
+    <button id="btn-secret-toggle" class="secret-toggle">▼タップで全問題が表示されます。ネタバレ注意！</button>
+    <div class="secret-table-wrap">
+      <table class="secret-table hidden" id="secret-table">
+        <thead>
+          <tr>
+            <th>答え</th>
+            <th>読み</th>
+            <th>説明</th>
+          </tr>
+        </thead>
+        <tbody id="secret-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="questions.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
