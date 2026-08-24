@@ -142,20 +142,23 @@ body {
 
 .tiles {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 10px;
+  align-items: center;
+  gap: var(--tile-gap, 10px);
   margin-bottom: 36px;
+  overflow-x: auto;
 }
 
 .tile {
-  width: 60px;
-  height: 60px;
+  width: var(--tile-size, 60px);
+  height: var(--tile-size, 60px);
+  flex-shrink: 0;
   border: 2px solid var(--black);
   border-radius: 0;
   background: var(--white);
   color: var(--black);
-  font-size: 26px;
+  font-size: var(--tile-font-size, 26px);
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -441,12 +444,6 @@ body {
 }
 
 @media (max-width: 480px) {
-  .tile {
-    width: 50px;
-    height: 50px;
-    font-size: 22px;
-  }
-
   .review-table {
     font-size: 12px;
   }

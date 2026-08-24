@@ -241,6 +241,31 @@
       btn.addEventListener("click", () => onTileClick(i));
       tilesEl.appendChild(btn);
     });
+
+    fitTiles();
+  }
+
+  // 横幅に収まるようタイルサイズを動的に計算する(改行させない)
+  function fitTiles() {
+    const n = currentTiles.length;
+    if (n === 0) return;
+
+    const containerEl = document.querySelector("#screen-quiz .container");
+    if (!containerEl) return;
+
+    const containerWidth = containerEl.clientWidth;
+    const gap = 8;
+    const maxTile = 60;
+    const minTile = 18;
+
+    const available = containerWidth - gap * (n - 1);
+    let tileSize = Math.floor(available / n);
+    tileSize = Math.max(minTile, Math.min(maxTile, tileSize));
+    const fontSize = Math.max(10, Math.round(tileSize * 0.45));
+
+    tilesEl.style.setProperty("--tile-size", `${tileSize}px`);
+    tilesEl.style.setProperty("--tile-font-size", `${fontSize}px`);
+    tilesEl.style.setProperty("--tile-gap", `${gap}px`);
   }
 
   function onTileClick(i) {
@@ -436,4 +461,5 @@
   btnSecretClose.addEventListener("click", onSecretCloseClick);
   btnSecretToggle.addEventListener("click", onSecretToggleClick);
   secretOverlay.addEventListener("click", onSecretOverlayClick);
+  window.addEventListener("resize", fitTiles);
 })();
