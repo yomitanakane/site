@@ -389,7 +389,7 @@
     const noHintClear = !hintEverUsed && !giveUpEverUsed;
     const timeText = formatTime(totalElapsedMs);
     const prefix = noHintClear ? "ノーヒントで" : "";
-    const text = `${prefix}激ムズアナグラム${correctCount}問を${timeText}でクリアした！ https://yomitanakane.com/Anagram #ムズグラム`;
+    const text = `${prefix}激ムズアナグラム${correctCount}問を${timeText}でクリアした！ https://yomitanakane.com/Anagram/ #ムズグラム`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
