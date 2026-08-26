@@ -33,6 +33,8 @@
   const answerWordEl = document.getElementById("answer-word");
   const answerExplanationEl = document.getElementById("answer-explanation");
 
+  const questionCountEl = document.getElementById("question-count");
+
   const resultNoHintEl = document.getElementById("result-nohint");
   const resultScoreEl = document.getElementById("result-score");
   const resultTimeEl = document.getElementById("result-time");
@@ -462,4 +464,7 @@
   btnSecretToggle.addEventListener("click", onSecretToggleClick);
   secretOverlay.addEventListener("click", onSecretOverlayClick);
   window.addEventListener("resize", fitTiles);
+
+  // ---------- 初期表示 ----------
+  questionCountEl.textContent = String(QUESTIONS.length);
 })();
