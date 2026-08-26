@@ -6,7 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
-  { title: "ぐぬぬ / 重音テト", tag: "楽曲", year:"2026", url: "https://www.nicovideo.jp/watch/sm46694295", img:"images/GUNUNU.png"},
+  { title: "ぐぬぬ / 重音テト", tag: "楽曲", year:"2026", url: "https://youtu.be/dVLnkroSFAY", img:"images/GUNUNU.png"},
   { title: "FOUND0", tag: "出演", year:"2026", url: "https://preview.studio.site/live/VGOKMv9Zan/news/zj0kA7FG", img:"images/FOUND0.jpg"},
   { title: "〇", tag: "その他", year:"2026", url: "https://youtu.be/sRD6CE_c6H8?si=tjYYoIa2orLt_Ki1", img:"images/Circle.png"},
   { title: "雨良『ぽい』", tag: "映像", year:"2026", ytId: "bNPzF89addE", img:"images/Poi.png"},
