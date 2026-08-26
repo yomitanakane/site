@@ -31,11 +31,13 @@ body {
 }
 
 .screen {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 48px 16px;
+  overflow-y: auto;
 }
 
 #screen-start {
@@ -469,5 +471,60 @@ body {
   .secret-panel {
     height: 90vh;
     padding: 14px;
+  }
+
+  /* 画面の高さに収まるよう、上下の余白・間隔を詰める */
+  .screen {
+    padding: 20px 16px;
+  }
+
+  #screen-quiz {
+    padding-top: 24px;
+  }
+
+  .title {
+    margin-bottom: 16px;
+  }
+
+  .description {
+    margin-bottom: 20px;
+  }
+
+  .quiz-header {
+    margin-bottom: 16px;
+  }
+
+  .quiz-prompt {
+    margin-bottom: 20px;
+    min-height: 0;
+  }
+
+  .tiles {
+    margin-bottom: 20px;
+  }
+
+  .result-box {
+    margin-top: 20px;
+    padding-top: 16px;
+  }
+
+  .answer-mark {
+    margin-bottom: 8px;
+  }
+
+  .answer-word {
+    margin-bottom: 8px;
+  }
+
+  .answer-explanation {
+    margin-bottom: 16px;
+  }
+
+  .answer-controls {
+    margin-top: 12px;
+  }
+
+  .review-table {
+    margin-top: 20px;
   }
 }
