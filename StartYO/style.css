@@ -1,0 +1,241 @@
+:root {
+  --black: #111111;
+  --white: #ffffff;
+  --gray-light: #eeeeee;
+  --gray-mid: #bbbbbb;
+  --gray-dark: #555555;
+  --red: #c62828;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", -apple-system, sans-serif;
+  background: var(--white);
+  color: var(--black);
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+#screen-start {
+  align-items: center;
+  position: relative;
+}
+
+.credit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--gray-mid);
+}
+
+.credit a {
+  color: var(--gray-dark);
+}
+
+.container {
+  width: 100%;
+  max-width: 640px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 900;
+  margin: 0 0 24px 0;
+  border-bottom: 2px solid var(--black);
+  padding-bottom: 12px;
+  text-align: center;
+}
+
+/* ---------- 説明ボックス ---------- */
+.description-box {
+  border: 2px solid var(--black);
+  padding: 20px;
+  margin: 0 0 28px 0;
+}
+
+.description {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--black);
+  margin: 0;
+  text-align: left;
+}
+
+.description strong {
+  font-weight: 900;
+}
+
+.description a {
+  color: var(--black);
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+/* ---------- 回答入力欄 ---------- */
+.answer-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.answer-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid var(--black);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--black);
+  -webkit-appearance: none;
+}
+
+.answer-input::placeholder {
+  color: var(--gray-mid);
+  font-weight: 500;
+}
+
+.error-text {
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  margin: 10px 0 0 0;
+}
+
+/* ---------- ボタン ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  border: 2px solid var(--black);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--black);
+  cursor: pointer;
+  margin-top: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--gray-light);
+  }
+}
+
+.btn-primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: var(--gray-dark);
+  }
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--black);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- 結果画面 ---------- */
+.result-total {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 28px 0;
+}
+
+.result-total-num {
+  font-size: 56px;
+  font-weight: 900;
+  margin: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.answer-results {
+  border-top: 2px solid var(--black);
+  padding-top: 8px;
+  margin-bottom: 8px;
+}
+
+.answer-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--gray-mid);
+  font-size: 15px;
+}
+
+.answer-result-word {
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.answer-result-score {
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .screen {
+    padding: 28px 16px;
+  }
+
+  .title {
+    font-size: 19px;
+    margin-bottom: 18px;
+  }
+
+  .description-box {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .result-total-num {
+    font-size: 44px;
+  }
+}

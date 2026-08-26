@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>「よ」で始まる言葉当て</title>
+<meta name="description" content="読谷あかねが「よ」で始まる言葉を沢山列挙したので、後ろのほうの回答を当ててみてください" />
+<meta property="og:title" content="「よ」で始まる言葉当て" />
+<meta property="og:description" content="読谷あかねが「よ」で始まる言葉を沢山列挙したので、後ろのほうの回答を当ててみてください" />
+<meta property="og:image" content="https://yomitanakane.com/StartYO/icon.png" />
+<meta property="og:image:width" content="256" />
+<meta property="og:image:height" content="256" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://yomitanakane.com/StartYO" />
+<meta property="og:site_name" content="「よ」で始まる言葉当て" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="「よ」で始まる言葉当て" />
+<meta name="twitter:description" content="読谷あかねが「よ」で始まる言葉を沢山列挙したので、後ろのほうの回答を当ててみてください" />
+<meta name="twitter:image" content="https://yomitanakane.com/StartYO/icon.png" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===================== スタート画面 ===================== -->
+<section id="screen-start" class="screen">
+  <div class="container">
+    <h1 class="title">読谷あかねの「よ」で始まる言葉当て</h1>
+
+    <div class="description-box">
+      <p class="description">
+        <a href="https://yomitanakane.com/" target="_blank" rel="noopener noreferrer">読谷あかね</a>です。<br />
+        <strong>「よ」で始まる3文字以上の言葉</strong>を100個、思いついた順に挙げました。<br />
+        出来る限り後半に思いついたであろうワードを3つ入力し送信してください。<br />
+        思いついた順=点数になります。<br />
+        本当に素直に思いついた順に書いたので変でも怒らないでもらえたら嬉しいです。<br />
+        解答はすべて<strong>平仮名で入力してください</strong>。
+      </p>
+    </div>
+
+    <div class="answer-inputs">
+      <input type="text" class="answer-input" id="answer-1" placeholder="1つ目の回答(ひらがな)" autocomplete="off" />
+      <input type="text" class="answer-input" id="answer-2" placeholder="2つ目の回答(ひらがな)" autocomplete="off" />
+      <input type="text" class="answer-input" id="answer-3" placeholder="3つ目の回答(ひらがな)" autocomplete="off" />
+    </div>
+
+    <button id="btn-submit" class="btn btn-primary">送信する</button>
+    <p class="error-text hidden" id="error-text">※未記入欄があります</p>
+  </div>
+  <p class="credit">
+    クレジット　<a href="https://yomitanakane.com/" target="_blank" rel="noopener noreferrer">読谷あかね</a>
+  </p>
+</section>
+
+<!-- ===================== 結果画面 ===================== -->
+<section id="screen-result" class="screen hidden">
+  <div class="container">
+    <p class="result-total">あなたの点数は<span class="result-total-num" id="result-total-num">0</span>点</p>
+
+    <div class="answer-results" id="answer-results"></div>
+
+    <button id="btn-share" class="btn btn-secondary">Xでシェア</button>
+    <button id="btn-retry" class="btn btn-primary">もう一度挑戦</button>
+  </div>
+</section>
+
+<script src="words.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
