@@ -18,6 +18,7 @@
   const answerResultsEl = document.getElementById("answer-results");
 
   const DEFAULT_ERROR_TEXT = "※未記入欄があります";
+  const DUPLICATE_ERROR_TEXT = "※同じ回答は送信できません";
 
   let lastTotal = 0;
 
@@ -38,12 +39,22 @@
 
   function onSubmit() {
     const values = inputs.map((el) => el.value);
-    const filled = values.every((v) => normalize(v).length > 0);
+    const normalized = values.map((v) => normalize(v));
+
+    const filled = normalized.every((v) => v.length > 0);
     if (!filled) {
       errorText.textContent = DEFAULT_ERROR_TEXT;
       errorText.classList.remove("hidden");
       return;
     }
+
+    const hasDuplicate = new Set(normalized).size !== normalized.length;
+    if (hasDuplicate) {
+      errorText.textContent = DUPLICATE_ERROR_TEXT;
+      errorText.classList.remove("hidden");
+      return;
+    }
+
     errorText.classList.add("hidden");
 
     const results = values.map((v) => {
