@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+  { title: "読谷あかねの「よ」で始まる言葉当て", tag: "その他", year:"2026", url: "https://yomitanakane.com/StartYO/", img:"images/StartYO.png"},
   { title: "激ムズアナグラム", tag: "その他", year:"2026", url: "https://yomitanakane.com/Anagram/", img:"images/Anagram.png"},
   { title: "ぐぬぬ / 重音テト", tag: "楽曲", year:"2026", url: "https://youtu.be/dVLnkroSFAY", img:"images/GUNUNU.png"},
   { title: "FOUND0", tag: "出演", year:"2026", url: "https://preview.studio.site/live/VGOKMv9Zan/news/zj0kA7FG", img:"images/FOUND0.jpg"},
