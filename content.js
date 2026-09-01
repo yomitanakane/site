@@ -22,6 +22,10 @@ const CONTACT_CONTENT = {
       title: "二次創作や二次利用について",
       body: "GUIDELINEページをご確認ください。"
     },
+    {
+      title: "楽曲配信や著作権管理のお誘いについて",
+      body: "現在TuneCoreJapan様にて一元管理しているため、基本的に辞退させていただいております。<br>カラオケ配信に関しましては是非ご相談いただけますと幸いです。"
+    },
   ],
   profileRows: [
     { label: "Profile", value: "読谷あかね / Yomitan Akane" },
