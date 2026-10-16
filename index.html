@@ -43,6 +43,9 @@
       /* タグ色：イラスト */
       --tag-illust-bg: #fde8e8;
       --tag-illust-fg: #c0392b;
+      /* タグ色：サイト（暗いグレー） */
+      --tag-site-bg: #555555;
+      --tag-site-fg: #ffffff;
       --card-w: 160px;
       --nav-h: 62px;
       /* ナビ内の左パディング＋アイコン幅＋gap で「読谷あかね」テキストが始まる位置 */
@@ -92,7 +95,7 @@
     .nav-icon {
       width: var(--nav-icon-w);
       height: var(--nav-icon-w);
-      border-radius: 50%;
+      border-radius: 0;
       overflow: hidden;
       background: rgba(255,255,255,0.2);
       display: flex;
@@ -115,7 +118,7 @@
       letter-spacing: 0.12em;
       color: rgba(255,255,255,0.75);
       padding: 7px 15px;
-      border-radius: 6px;
+      border-radius: 0;
       transition: all 0.2s;
       cursor: pointer;
       background: none;
@@ -192,7 +195,7 @@
       letter-spacing: 0.04em;
       white-space: nowrap;
       padding: 5px 10px;
-      border-radius: 6px;
+      border-radius: 0;
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.15s;
@@ -235,7 +238,7 @@
       font-weight: 500;
       letter-spacing: 0.05em;
       padding: 6px 18px;
-      border-radius: 999px;
+      border-radius: 0;
       border: 1px solid var(--soft);
       background: transparent;
       color: #444;
@@ -274,7 +277,7 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .thumb-wrap {
-      border-radius: 10px;
+      border-radius: 0;
       overflow: hidden;
       aspect-ratio: 1 / 1;
       position: relative;
@@ -311,7 +314,7 @@
       color: var(--tag-fg);
       background: var(--tag-bg);
       padding: 2px 9px;
-      border-radius: 999px;
+      border-radius: 0;
     }
     .work-year { font-size: 10px; color: #888; }
 
@@ -320,6 +323,7 @@
     .work-tag[data-tag="出演"] { color: var(--tag-appear-fg); background: var(--tag-appear-bg); }
     .work-tag[data-tag="その他"] { color: var(--tag-other-fg); background: var(--tag-other-bg); }
     .work-tag[data-tag="イラスト"] { color: var(--tag-illust-fg); background: var(--tag-illust-bg); }
+    .work-tag[data-tag="サイト"] { color: var(--tag-site-fg); background: var(--tag-site-bg); }
 
     /* フィルターボタンホバー */
     .filter-btn[data-filter="楽曲"]:hover { border-color: var(--accent); color: var(--tag-fg); }
@@ -327,12 +331,14 @@
     .filter-btn[data-filter="出演"]:hover { border-color: #e0c840; color: var(--tag-appear-fg); }
     .filter-btn[data-filter="その他"]:hover { border-color: #5fc878; color: var(--tag-other-fg); }
     .filter-btn[data-filter="イラスト"]:hover { border-color: #e57373; color: var(--tag-illust-fg); }
+    .filter-btn[data-filter="サイト"]:hover { border-color: var(--tag-site-bg); color: var(--tag-site-bg); }
 
     /* フィルターボタンアクティブ */
     .filter-btn.active[data-filter="映像"] { background: var(--tag-music-bg); border-color: #7bd0de; color: var(--tag-music-fg); }
     .filter-btn.active[data-filter="出演"] { background: var(--tag-appear-bg); border-color: #e0c840; color: var(--tag-appear-fg); }
     .filter-btn.active[data-filter="その他"] { background: var(--tag-other-bg); border-color: #5fc878; color: var(--tag-other-fg); }
     .filter-btn.active[data-filter="イラスト"] { background: var(--tag-illust-bg); border-color: #e57373; color: var(--tag-illust-fg); }
+    .filter-btn.active[data-filter="サイト"] { background: var(--tag-site-bg); border-color: var(--tag-site-bg); color: var(--tag-site-fg); }
 
     /* ========== 詳細パネル（ホバー） ========== */
     .detail-panel {
@@ -340,7 +346,7 @@
       z-index: 500;
       width: 280px;
       background: #3a3a3a;
-      border-radius: 10px;
+      border-radius: 0;
       padding: 14px 16px;
       pointer-events: none;
       opacity: 0;
@@ -355,7 +361,7 @@
 
     /* ========== カード内ホバー詳細 ========== */
     .card-detail-box {
-      font-size: 11px; color: #fff; background: #2e2e2e; border-radius: 0 0 8px 8px; padding: 8px 10px 10px; line-height: 1.6;
+      font-size: 11px; color: #fff; background: #2e2e2e; border-radius: 0; padding: 8px 10px 10px; line-height: 1.6;
       opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.2s ease, max-height 0.2s ease, padding 0.2s ease; text-align: left;
     }
     .work-card:hover .card-detail-box { opacity: 1; max-height: 200px; padding: 8px 10px 10px; }
@@ -436,7 +442,7 @@
     /* ========== ページネーション ========== */
     .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 36px; padding-bottom: 8px; opacity: 0; transition: opacity 0.3s ease; }
     .pagination.visible { opacity: 1; }
-    .page-btn { font-family: 'Noto Sans JP', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.05em; padding: 8px 22px; border-radius: 999px; border: 1px solid var(--soft); background: transparent; color: #444; cursor: pointer; transition: all 0.2s; }
+    .page-btn { font-family: 'Noto Sans JP', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.05em; padding: 8px 22px; border-radius: 0; border: 1px solid var(--soft); background: transparent; color: #444; cursor: pointer; transition: all 0.2s; }
     .page-btn:hover { border-color: var(--accent); color: var(--fg); background: var(--tag-bg); }
     .page-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
     .page-btn.current { background: var(--tag-bg); border-color: var(--accent); color: var(--tag-fg); font-weight: 700; }
@@ -458,7 +464,7 @@
     .gl-forbidden li { font-size: 14.5px; line-height: 1.65; color: var(--fg); padding-left: 1.2em; position: relative; }
     .gl-forbidden li::before { content: "·"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
     .gl-hashtag-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-    .gl-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--tag-bg); color: var(--tag-fg); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; padding: 6px 14px; border-radius: 999px; text-decoration: none; transition: opacity 0.2s, transform 0.2s; }
+    .gl-tag-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--tag-bg); color: var(--tag-fg); font-size: 13px; font-weight: 600; letter-spacing: 0.04em; padding: 6px 14px; border-radius: 0; text-decoration: none; transition: opacity 0.2s, transform 0.2s; }
     .gl-tag-chip:hover { opacity: 0.8; transform: translateY(-1px); }
 
     /* Q&A アコーディオン */
@@ -467,7 +473,7 @@
     .qa-item:first-child { border-top: none; }
     .qa-question { width: 100%; text-align: left; background: none; border: none; font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 500; color: var(--fg); padding: 14px 16px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: background 0.15s; line-height: 1.6; }
     .qa-question:hover { background: #f2ecf8; }
-    .qa-question .qa-q-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--tag-fg); background: var(--tag-bg); padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+    .qa-question .qa-q-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--tag-fg); background: var(--tag-bg); padding: 2px 7px; border-radius: 0; flex-shrink: 0; margin-top: 2px; }
     .qa-question .qa-chevron { margin-left: auto; flex-shrink: 0; transition: transform 0.25s ease; color: var(--accent); margin-top: 3px; }
     .qa-item.open .qa-chevron { transform: rotate(180deg); }
     .qa-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.25s ease; padding: 0 16px 0 44px; font-size: 14px; line-height: 1.7; color: var(--mid); background: #faf7fd; }
@@ -609,7 +615,7 @@
 
     #random-card {
       background: #fff;
-      border-radius: 14px;
+      border-radius: 0;
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,0.25);
       width: min(340px, 88vw);
@@ -658,7 +664,7 @@
       font-weight: 700;
       letter-spacing: 0.08em;
       padding: 5px 12px;
-      border-radius: 999px;
+      border-radius: 0;
       text-decoration: none;
       pointer-events: auto;
       transition: background 0.18s;
@@ -687,14 +693,14 @@
       color: var(--tag-fg);
       background: var(--tag-bg);
       padding: 3px 10px;
-      border-radius: 999px;
+      border-radius: 0;
       letter-spacing: 0.05em;
     }
 
     #random-close-btn {
       background: rgba(255,255,255,0.95);
       border: none;
-      border-radius: 999px;
+      border-radius: 0;
       padding: 9px 26px;
       font-family: 'Noto Sans JP', sans-serif;
       font-size: 13px;
@@ -857,6 +863,7 @@
         <button class="filter-btn active" data-filter="all">すべて</button>
         <button class="filter-btn" data-filter="楽曲">楽曲</button>
         <button class="filter-btn" data-filter="映像">映像</button>
+        <button class="filter-btn" data-filter="サイト">サイト</button>
         <button class="filter-btn" data-filter="出演">出演</button>
         <button class="filter-btn" data-filter="イラスト">イラスト</button>
         <button class="filter-btn" data-filter="その他">その他</button>
@@ -1505,6 +1512,7 @@ function updateCardContent(work) {
     '映像':    ['var(--tag-music-bg)',  'var(--tag-music-fg)'],
     '出演':    ['var(--tag-appear-bg)', 'var(--tag-appear-fg)'],
     'イラスト':['var(--tag-illust-bg)', 'var(--tag-illust-fg)'],
+    'サイト':  ['var(--tag-site-bg)',   'var(--tag-site-fg)'],
     'その他':  ['var(--tag-other-bg)',  'var(--tag-other-fg)'],
   };
   const [bg, fg] = tagColors[work.tag] || ['var(--tag-bg)', 'var(--tag-fg)'];
