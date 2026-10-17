@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+  { title: "検索可能クイズYomitanQ", tag: "サイト", year:"2026", url: "https://yomitanakane.com/YomitanQ/", img:"images/YomitanQ.png"},
   { title: "読谷あかねの「よ」で始まる言葉当て", tag: "サイト", year:"2026", url: "https://yomitanakane.com/StartYO/", img:"images/StartYO.png"},
   { title: "激ムズアナグラム", tag: "サイト", year:"2026", url: "https://yomitanakane.com/Anagram/", img:"images/Anagram.png"},
   { title: "ぐぬぬ / 重音テト", tag: "楽曲", year:"2026", url: "https://youtu.be/dVLnkroSFAY", img:"images/GUNUNU.png"},
