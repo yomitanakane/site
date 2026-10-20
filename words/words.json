@@ -257,5 +257,6 @@
 {"id":"mvgt7pqiyny9","word":"『ジャバウォックの詩』","reading":"じゃばうぉっくのし","variants":[],"meaning":"『鏡の国のアリス』に登場する詩。\nかばん語が多く用いられたナンセンスな内容。","links":"","tags":["かばん語","詩","『鏡の国のアリス』","ナンセンス"],"mora":7,"created":"2026-10-20T14:59:50.154Z","updated":"2026-10-20T14:59:50.154Z"},
 {"id":"mvgtc6jt91qn","word":"『雀こ』","reading":"すずめこ","variants":[],"meaning":"太宰治による短編小説。恩師である井伏鱒二に捧げられた。\n津軽弁で昔話のように書かれる。","links":"","tags":["太宰治","小説","井伏鱒二","スズメ"],"mora":4,"created":"2026-10-20T15:03:18.568Z","updated":"2026-10-20T15:03:18.568Z"},
 {"id":"mvgte043sos6","word":"『尺には尺を』","reading":"しゃくにはしゃくを","variants":["《Measure for Measure》"],"meaning":"ウィリアム・スェイクスピアが1603年ごろに書いた戯曲。","links":"","tags":["ウィリアム・スェイクスピア","戯曲","喜劇","問題劇"],"mora":7,"created":"2026-10-20T15:04:43.539Z","updated":"2026-10-20T15:04:43.539Z"},
-{"id":"mvgtft4rc5ub","word":"こませ","reading":"こませ","variants":[],"meaning":"釣りにおける撒き餌。","links":"","tags":["餌","釣り"],"mora":3,"created":"2026-10-20T15:06:07.803Z","updated":"2026-10-20T15:06:07.803Z"}
+{"id":"mvgtft4rc5ub","word":"こませ","reading":"こませ","variants":[],"meaning":"釣りにおける撒き餌。","links":"","tags":["餌","釣り"],"mora":3,"created":"2026-10-20T15:06:07.803Z","updated":"2026-10-20T15:06:07.803Z"},
+{"id":"mvgtjjpgo3i0","word":"球電","reading":"きゅうでん","variants":["Kugelblitz"],"meaning":"雷雨の際、空中を発光体が浮遊する未解明の自然現象。","links":"","tags":["現象","光","雷"],"mora":4,"created":"2026-10-20T15:09:02.212Z","updated":"2026-10-20T15:09:02.212Z"}
 ]
