@@ -122,7 +122,7 @@ select.on { background: #000; color: #fff; }
 .kana .k-clear { grid-column: 1 / -1; width: auto; }
 .chip { background: #000; color: #fff; }
 .chip:hover { background: #fff; color: #000; }
-#grid, .rel {
+#grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -174,6 +174,7 @@ select.on { background: #000; color: #fff; }
 .panel .gsearch { position: absolute; right: -1px; top: -1px; height: 31px; font-size: 12px; padding: 0 12px; z-index: 1; }
 .body { text-align: left; display: flex; flex-direction: column; align-items: stretch; gap: 18px; }
 .d-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.d-head .d-read + .d-var { margin-top: -4px; }
 .d-word { font-size: 44px; font-weight: 500; line-height: 1.2; letter-spacing: .1em; overflow-wrap: anywhere; }
 .d-read { font-size: 12px; color: #555; letter-spacing: .1em; }
 .d-var { font-size: 15px; color: #222; }
@@ -182,13 +183,14 @@ select.on { background: #000; color: #fff; }
 .d-mean > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 .d-links { font-size: 11px; color: #555; line-height: 1.7; }
 .d-links > div { white-space: pre-wrap; overflow-wrap: anywhere; }
-.d-tags { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
-.d-tags button { font-size: 15px; padding: 4px 12px; letter-spacing: 0; }
-.d-tags button.on { background: #000; color: #fff; }
-.rel { width: 100%; margin-top: 4px; }
-.rel:empty { display: none; }
-.rel .none { grid-column: 1 / -1; font-size: 11px; color: #888; }
-.panel .scroll, .rel { transition: opacity .15s; }
+/* タグと、それに紐づく単語 */
+.d-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.d-tagrow .tag { font-size: 15px; padding: 3px 12px; border: 1px solid #000; line-height: 1.4; }
+.d-rel { display: flex; flex-wrap: wrap; gap: 4px 1.2em; padding: 0 2px 6px; }
+.d-rel .rw { border: 0; padding: 0; background: none; font-size: 15px; letter-spacing: 0; line-height: 1.6; text-align: left; }
+.d-rel .rw:hover { background: none; color: #000; text-decoration: underline; text-underline-offset: 3px; }
+.panel .scroll { transition: opacity .15s; }
 #ghost {
   position: fixed; z-index: 50;
   border: 1px solid #000;
@@ -200,7 +202,7 @@ select.on { background: #000; color: #fff; }
   .panel .scroll { padding: 22px 20px 28px; }
   .d-word { font-size: 32px; }
   .d-mean { font-size: 16px; }
-  .d-var, .d-tags button { font-size: 14px; }
+  .d-var, .d-tagrow .tag, .d-rel .rw { font-size: 14px; }
   .cell { min-height: 36px; padding: 5px 4px; font-size: 14px; }
   .cell.s-m { font-size: 11px; }
   .cell.s-s { font-size: 10px; }

@@ -915,7 +915,7 @@
   const detail = $('#detail'), backdrop = $('.backdrop', detail), wrap = $('.wrap', detail);
   const panel = $('.panel', detail), scroller = $('.scroll', detail), body = $('.body', detail);
   const ghost = $('#ghost');
-  let cur = null, relTag = null, busy = false;
+  let cur = null, busy = false;
 
   function linkify(parent, text) {
     const re = /https?:\/\/[^\s<>"'「」『』（）、。]+/g;
@@ -935,12 +935,12 @@
     const head = el('div', 'd-head');
     head.append(el('div', 'd-word', w.word));
     if (w.reading) head.append(el('div', 'd-read', w.reading));
-    body.append(head);
     if (w.variants.length) {
       const v = el('div', 'd-var');
       for (const s of w.variants) v.append(el('span', null, s));
-      body.append(v);
+      head.append(v);
     }
+    body.append(head);
     if (w.meaning) {
       const m = el('div', 'd-mean');
       m.append(el('div', null, w.meaning));
@@ -952,56 +952,41 @@
       l.append(inner);
       body.append(l);
     }
-    if (w.tags.length) {
-      const t = el('div', 'd-tags');
-      for (const tag of w.tags) {
-        const b = el('button', view === 'list' && state.tag === tag ? 'on' : null, tag);
-        b.dataset.tag = tag;
-        b.addEventListener('click', () => onTag(tag));
-        t.append(b);
+    const entries = w.tags.map((tag) => ({ tag, list: membersOf(tag).filter((o) => o !== w) }));
+    if (w.selfTag && !w.tags.includes(w.selfTag)) entries.push({ tag: w.selfTag, list: membersOf(w.selfTag).filter((o) => o !== w) });
+    entries.sort((a, b) => a.list.length - b.list.length);
+    if (entries.length) {
+      const box = el('div', 'd-tags');
+      let row = null;
+      for (const { tag, list } of entries) {
+        // リンクのないタグは1行にまとめて並べる
+        if (!row || list.length || row.dataset.lone !== '1') {
+          row = el('div', 'd-tagrow');
+          row.dataset.lone = list.length ? '0' : '1';
+          box.append(row);
+        }
+        row.append(el('span', 'tag', tag));
+        if (!list.length) continue;
+        const ws = el('div', 'd-rel');
+        for (const o of list) {
+          const b = el('button', 'rw', o.word);
+          b.addEventListener('click', () => {
+            if (view === 'list') swapDetail(o);
+            else closeDetail(() => goToWord(o, () => openFromNode(o)), true);
+          });
+          ws.append(b);
+        }
+        box.append(ws);
+        row = null;
       }
-      body.append(t);
+      body.append(box);
     }
-    body.append(el('div', 'rel'));
-  }
-
-  // タグの単語を下に並べる
-  function showRelated(tag, byUser) {
-    relTag = tag;
-    if (view !== 'list') $$('.d-tags button', body).forEach((b) => b.classList.toggle('on', b.dataset.tag === tag));
-    const rel = $('.rel', body);
-    rel.textContent = '';
-    if (!tag) return rel;
-    for (const o of membersOf(tag)) {
-      if (o === cur.w) continue;
-      rel.append(cellFor(o, () => {
-        if (view === 'list') swapDetail(o);
-        else closeDetail(() => goToWord(o, () => openFromNode(o)), true);
-      }));
-    }
-    if (!rel.firstChild && byUser) rel.append(el('div', 'none', 'リンクなし'));
-    fitCells(rel);
-    return rel;
   }
 
   // 一覧画面：拡大表示の中身だけを別の単語に切り替える
-  // 拡大表示の上端を今の位置で固定し、以降は下へ伸びるようにする
-  function pinPanel() {
-    if (wrap.style.alignItems) return;
-    const top = panel.getBoundingClientRect().top;
-    wrap.style.alignItems = 'flex-start';
-    wrap.style.paddingTop = top + 'px';
-  }
-  function unpinPanel() {
-    wrap.style.alignItems = '';
-    wrap.style.paddingTop = '';
-  }
-
   function swapDetail(o) {
-    unpinPanel();
     cur = { w: o, src: listCells.get(o.id) || null };
     fillDetail(o);
-    if (o.selfTag) showRelated(o.selfTag);
     scroller.scrollTop = 0;
     scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
   }
@@ -1025,11 +1010,8 @@
     if (busy || !w) return;
     busy = true;
     cur = { w, src };
-    relTag = null;
-    unpinPanel();
     fillDetail(w);
     detail.hidden = false;
-    if (w.selfTag) showRelated(w.selfTag);
     scroller.scrollTop = 0;
     panel.style.visibility = 'hidden';
     const to = panel.getBoundingClientRect();
@@ -1068,16 +1050,6 @@
     busy = false;
   }
 
-  function onTag(tag) {
-    if (view === 'list') {
-      closeDetail(() => setTagFilter(tag), true);
-      return;
-    }
-    pinPanel();
-    const rel = showRelated(relTag === tag ? null : tag, true);
-    if (relTag) rel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
-  }
-
   $('.gsearch', panel).addEventListener('click', () => {
     if (cur) window.open('https://www.google.com/search?q=' + encodeURIComponent(cur.w.word), '_blank', 'noopener');
   });
@@ -1093,7 +1065,7 @@
   let fitTimer = 0;
   addEventListener('resize', () => {
     clearTimeout(fitTimer);
-    fitTimer = setTimeout(() => { if (!listEl.hidden) fitCells(grid); if (!detail.hidden) fitCells(body); }, 120);
+    fitTimer = setTimeout(() => { if (!listEl.hidden) fitCells(grid); }, 120);
   });
   const SORT_LABEL = { kana: 'あいう', mora: 'モーラ', link: 'タグリンク数' };
 
