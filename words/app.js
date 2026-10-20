@@ -696,7 +696,7 @@
     ctx.lineWidth = dpr >= 1.5 ? 1 / dpr : 0.6;
     ctx.lineJoin = 'round';
     for (const b of buckets) {
-      ctx.strokeStyle = `rgba(0,0,0,${b.alpha})`;
+      ctx.strokeStyle = `rgba(0,140,220,${b.alpha})`; // 水色（濃さは今まで通り）
       ctx.beginPath();
       for (const l of b.lines) {
         const x1 = l[0] * z + ox, y1 = l[1] * z + oy, x2 = l[2] * z + ox, y2 = l[3] * z + oy;
