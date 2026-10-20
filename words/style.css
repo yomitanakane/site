@@ -186,10 +186,11 @@ select.on { background: #000; color: #fff; }
 /* タグと、それに紐づく単語 */
 .d-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
-.d-tagrow .tag { font-size: 15px; padding: 3px 12px; border: 1px solid #000; line-height: 1.4; }
-.d-rel { display: flex; flex-wrap: wrap; gap: 4px 1.2em; padding: 0 2px 6px; }
-.d-rel .rw { border: 0; padding: 0; background: none; font-size: 15px; letter-spacing: 0; line-height: 1.6; text-align: left; }
-.d-rel .rw:hover { background: none; color: #000; text-decoration: underline; text-underline-offset: 3px; }
+/* タグは黒地で小さめ、単語は白地の枠付きボタン */
+.d-tagrow .tag { font-size: 12px; padding: 3px 10px; border: 1px solid #000; background: #000; color: #fff; line-height: 1.4; letter-spacing: .04em; }
+.d-rel { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 6px; }
+.d-rel .rw { font-size: 15px; padding: 4px 12px; letter-spacing: 0; line-height: 1.4; text-align: left; }
+.d-rel .rw:hover { background: #f0f0f0; color: #000; }
 .panel .scroll { transition: opacity .15s; }
 #ghost {
   position: fixed; z-index: 50;
@@ -202,7 +203,8 @@ select.on { background: #000; color: #fff; }
   .panel .scroll { padding: 22px 20px 28px; }
   .d-word { font-size: 32px; }
   .d-mean { font-size: 16px; }
-  .d-var, .d-tagrow .tag, .d-rel .rw { font-size: 14px; }
+  .d-var, .d-rel .rw { font-size: 14px; }
+  .d-tagrow .tag { font-size: 11px; }
   .cell { min-height: 36px; padding: 5px 4px; font-size: 14px; }
   .cell.s-m { font-size: 11px; }
   .cell.s-s { font-size: 10px; }
