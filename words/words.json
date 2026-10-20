@@ -261,5 +261,6 @@
 {"id":"mvgtjjpgo3i0","word":"球電","reading":"きゅうでん","variants":["Kugelblitz"],"meaning":"雷雨の際、空中を発光体が浮遊する未解明の自然現象。","links":"","tags":["現象","光","雷"],"mora":4,"created":"2026-10-20T15:09:02.212Z","updated":"2026-10-20T15:09:02.212Z"},
 {"id":"mvgtn5lj499l","word":"ゼンタングル","reading":"ぜんたんぐる","variants":["Zentangle"],"meaning":"簡単な模様を繰り返し描くペン画の技法。「Zen」は禅を意味する。\n2004年にアメリカで考案された。","links":"","tags":["絵画の手法","禅","模様"],"mora":6,"created":"2026-10-20T15:11:50.551Z","updated":"2026-10-20T15:11:50.551Z"},
 {"id":"mvgtocby7teo","word":"ゼブラ企業","reading":"ぜぶらきぎょう","variants":[],"meaning":"社会課題の解決と経済成長の両立を目指す企業のこと。\n「ユニコーン企業」のアンチテーゼとして2017年に4人の女性起業家により提唱された。\n二律背反の課題をシマウマの白黒模様に喩えている。","links":"","tags":["シマウマ","企業","ユニコーン企業"],"mora":6,"created":"2026-10-20T15:12:45.934Z","updated":"2026-10-20T15:12:45.934Z"},
-{"id":"mvgu1w4wjmwp","word":"Y","reading":"イ","variants":[],"meaning":"フランス・ソンム県の地名。","links":"","tags":["地名"],"mora":1,"created":"2026-10-20T15:23:18.128Z","updated":"2026-10-20T15:23:18.128Z"}
+{"id":"mvgu1w4wjmwp","word":"Y","reading":"イ","variants":[],"meaning":"フランス・ソンム県の地名。","links":"","tags":["地名"],"mora":1,"created":"2026-10-20T15:23:18.128Z","updated":"2026-10-20T15:23:18.128Z"},
+{"id":"mvgu67z3co89","word":"无火殯斂","reading":"ほなしあがり","variants":[],"meaning":"死を隠すため灯火をたかずに殯(もがり)をすること。","links":"","tags":["葬式","死","火","四字熟語"],"mora":6,"created":"2026-10-20T15:26:40.095Z","updated":"2026-10-20T15:26:40.095Z"}
 ]
