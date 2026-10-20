@@ -159,7 +159,9 @@ select.on { background: #000; color: #fff; }
 }
 .panel {
   position: relative;
-  padding-top: 30px; /* 検索ボタンの下からスクロール */
+  --strip: 30px; /* 検索ボタンの帯 */
+  --top: 26px;   /* 帯の下から単語名まで */
+  padding-top: var(--strip); /* 検索ボタンの下からスクロール */
   width: 640px; max-width: 100%;
   max-height: 100%;
   border: 1px solid #000;
@@ -168,7 +170,7 @@ select.on { background: #000; color: #fff; }
 }
 .panel .scroll {
   overflow-y: auto;
-  padding: 26px 40px 40px;
+  padding: var(--top) 40px 40px;
   -webkit-overflow-scrolling: touch;
 }
 .panel .gsearch { position: absolute; right: -1px; top: -1px; height: 31px; font-size: 12px; padding: 0 12px; z-index: 1; }
@@ -185,6 +187,8 @@ select.on { background: #000; color: #fff; }
 .d-links > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* タグと、それに紐づく単語 */
 .d-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+/* 説明文との区切り線。説明文〜線の間隔を、枠の上端〜単語名の間隔と同じにする（18px は .body の gap） */
+.body > .d-tags { margin-top: calc(var(--strip) + var(--top) - 18px); border-top: 1px solid #000; padding-top: 20px; }
 .d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
 /* タグは黒地で小さめ、単語は白地の枠付きボタン */
 .d-tagrow .tag { font-size: 12px; padding: 3px 10px; border: 1px solid #000; background: #000; color: #fff; line-height: 1.4; letter-spacing: .04em; }
@@ -200,7 +204,8 @@ select.on { background: #000; color: #fff; }
 }
 
 @media (max-width: 600px) {
-  .panel .scroll { padding: 22px 20px 28px; }
+  .panel { --top: 22px; }
+  .panel .scroll { padding: var(--top) 20px 28px; }
   .d-word { font-size: 32px; }
   .d-mean { font-size: 16px; }
   .d-var, .d-rel .rw { font-size: 14px; }
