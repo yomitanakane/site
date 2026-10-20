@@ -35,7 +35,7 @@ a { color: inherit; }
 }
 #map.dragging { cursor: grabbing; }
 #lines { position: absolute; left: 0; top: 0; pointer-events: none; }
-#world { position: absolute; left: 0; top: 0; will-change: transform; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .node {
   position: absolute; left: 0; top: 0;
   padding: 5px 10px;

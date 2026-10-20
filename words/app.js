@@ -155,7 +155,7 @@
   const nodeById = new Map();
   let buckets = [];
   const bounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-  const cam = { x: 0, y: 0 };
+  const cam = { x: 0, y: 0, z: 1 }; // z: 拡大率
   let W = innerWidth, H = innerHeight, dpr = 1;
 
   function mulberry32(a) {
@@ -580,13 +580,13 @@
   function drawLines() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    const ox = Math.round(W / 2 - cam.x), oy = Math.round(H / 2 - cam.y);
+    const z = cam.z, ox = Math.round(W / 2 - cam.x * z), oy = Math.round(H / 2 - cam.y * z);
     ctx.lineWidth = 1;
     for (const b of buckets) {
       ctx.strokeStyle = `rgba(0,0,0,${b.alpha})`;
       ctx.beginPath();
       for (const l of b.lines) {
-        const x1 = l[0] + ox, y1 = l[1] + oy, x2 = l[2] + ox, y2 = l[3] + oy;
+        const x1 = l[0] * z + ox, y1 = l[1] * z + oy, x2 = l[2] * z + ox, y2 = l[3] * z + oy;
         if ((x1 < 0 && x2 < 0) || (x1 > W && x2 > W) || (y1 < 0 && y2 < 0) || (y1 > H && y2 > H)) continue;
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -596,7 +596,8 @@
   }
 
   function paint() {
-    world.style.transform = `translate3d(${Math.round(W / 2 - cam.x)}px, ${Math.round(H / 2 - cam.y)}px, 0)`;
+    const z = cam.z;
+    world.style.transform = `translate3d(${Math.round(W / 2 - cam.x * z)}px, ${Math.round(H / 2 - cam.y * z)}px, 0) scale(${z})`;
     drawLines();
   }
   let rafId = 0;
@@ -604,19 +605,35 @@
 
   // 画面が単語のある範囲（＋余白）からはみ出さないようにする
   function clampPt(p) {
-    const m = 100;
-    const lx = bounds.minX - m + W / 2, hx = bounds.maxX + m - W / 2;
-    const ly = bounds.minY - m + H / 2, hy = bounds.maxY + m - H / 2;
+    const z = cam.z, m = 100 / z, hw = W / 2 / z, hh = H / 2 / z;
+    const lx = bounds.minX - m + hw, hx = bounds.maxX + m - hw;
+    const ly = bounds.minY - m + hh, hy = bounds.maxY + m - hh;
     p.x = lx > hx ? (bounds.minX + bounds.maxX) / 2 : Math.min(hx, Math.max(lx, p.x));
     p.y = ly > hy ? (bounds.minY + bounds.maxY) / 2 : Math.min(hy, Math.max(ly, p.y));
     return p;
+  }
+
+  // 拡大・縮小の範囲（縮小は全体が画面に収まるまで）
+  const Z_MAX = 2.5;
+  function zMin() {
+    const fit = Math.min(W / (bounds.maxX - bounds.minX + 200), H / (bounds.maxY - bounds.minY + 200));
+    return Math.min(1, Math.max(0.05, fit));
+  }
+  // 画面上の点 (sx, sy) を中心に拡大率を z にする
+  function zoomAt(z, sx, sy) {
+    z = Math.min(Z_MAX, Math.max(zMin(), z));
+    const wx = cam.x + (sx - W / 2) / cam.z, wy = cam.y + (sy - H / 2) / cam.z;
+    cam.z = z;
+    cam.x = wx - (sx - W / 2) / z;
+    cam.y = wy - (sy - H / 2) / z;
+    clampPt(cam);
   }
 
   function resize() {
     W = innerWidth; H = innerHeight; dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    if (nodes.length) clampPt(cam);
+    if (nodes.length) { cam.z = Math.max(cam.z, zMin()); clampPt(cam); }
     paint();
   }
   addEventListener('resize', resize);
@@ -655,52 +672,83 @@
     openDetail(w, n.el.getBoundingClientRect(), n.el);
   }
 
-  // ドラッグで移動
-  let drag = null;
+  // ドラッグで移動、2本指で拡大・縮小
+  let drag = null, pinch = null;
+  const pointers = new Map();
+  const pinchInfo = () => {
+    const [a, b] = [...pointers.values()];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  };
   mapEl.addEventListener('pointerdown', (e) => {
-    if (drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     stopFly();
     hideCands();
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, node: e.target.closest('.node'), moved: false };
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     mapEl.setPointerCapture(e.pointerId);
+    if (pointers.size === 1) {
+      drag = { sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, node: e.target.closest('.node'), moved: false };
+    } else if (pointers.size === 2) {
+      const p = pinchInfo();
+      pinch = { d: p.d, z: cam.z, wx: cam.x + (p.x - W / 2) / cam.z, wy: cam.y + (p.y - H / 2) / cam.z };
+      if (drag) drag.moved = true;
+    }
   });
   mapEl.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
+    const pt = pointers.get(e.pointerId);
+    if (!pt) return;
+    pt.x = e.clientX; pt.y = e.clientY;
+    if (pinch && pointers.size >= 2) {
+      const p = pinchInfo();
+      cam.z = Math.min(Z_MAX, Math.max(zMin(), pinch.z * p.d / pinch.d));
+      cam.x = pinch.wx - (p.x - W / 2) / cam.z;
+      cam.y = pinch.wy - (p.y - H / 2) / cam.z;
+      clampPt(cam);
+      render();
+      return;
+    }
+    if (!drag) return;
     if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) {
       drag.moved = true;
       mapEl.classList.add('dragging');
     }
     if (drag.moved) {
-      cam.x -= e.clientX - drag.lx; cam.y -= e.clientY - drag.ly;
+      cam.x -= (e.clientX - drag.lx) / cam.z; cam.y -= (e.clientY - drag.ly) / cam.z;
       clampPt(cam);
       render();
     }
     drag.lx = e.clientX; drag.ly = e.clientY;
   });
   const endDrag = (e) => {
-    if (!drag || e.pointerId !== drag.id) return;
+    if (!pointers.delete(e.pointerId)) return;
+    if (pointers.size === 1) {
+      // 2本指から1本指に戻ったら、残った指でドラッグを続ける
+      pinch = null;
+      const [p] = [...pointers.values()];
+      drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, node: null, moved: true };
+      return;
+    }
+    if (pointers.size) return;
     const d = drag;
     drag = null;
+    pinch = null;
     mapEl.classList.remove('dragging');
-    if (e.type === 'pointerup' && !d.moved && d.node) openFromNode(byId.get(d.node.dataset.id));
+    if (d && e.type === 'pointerup' && !d.moved && d.node) openFromNode(byId.get(d.node.dataset.id));
   };
   mapEl.addEventListener('pointerup', endDrag);
   mapEl.addEventListener('pointercancel', endDrag);
+  // ホイール（スクロール）で拡大・縮小
   mapEl.addEventListener('wheel', (e) => {
     e.preventDefault();
     stopFly();
     const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? H : 1;
-    let ddx = e.deltaX * k, ddy = e.deltaY * k;
-    if (e.shiftKey && !ddx) { ddx = ddy; ddy = 0; }
-    cam.x += ddx; cam.y += ddy;
-    clampPt(cam);
+    zoomAt(cam.z * Math.exp(-e.deltaY * k * 0.0015), e.clientX, e.clientY);
     render();
   }, { passive: false });
 
   $('#warp').addEventListener('click', () => {
     if (!nodes.length) return;
-    let pool = nodes.filter((n) => Math.hypot(n.x - cam.x, n.y - cam.y) > Math.min(W, H) * 0.6);
+    let pool = nodes.filter((n) => Math.hypot(n.x - cam.x, n.y - cam.y) > Math.min(W, H) * 0.6 / cam.z);
     if (!pool.length) pool = nodes;
     const n = pool[Math.floor(Math.random() * pool.length)];
     flyTo(n.x, n.y);
@@ -1012,7 +1060,7 @@
     $$('[data-sort]', listEl).forEach((b) => {
       const on = b.dataset.sort === state.sort;
       b.classList.toggle('on', on);
-      b.textContent = SORT_LABEL[b.dataset.sort] + (on ? (state.dir > 0 ? ' ↑' : ' ↓') : '');
+      b.textContent = SORT_LABEL[b.dataset.sort] + (on ? (state.dir > 0 ? ' ▼' : ' ▲') : '');
     });
     fMora.value = state.mora == null ? '' : String(state.mora);
     fInit.textContent = state.initial || '—';
