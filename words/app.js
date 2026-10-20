@@ -49,6 +49,7 @@
   let words = [];
   const byId = new Map();
   const tagMap = new Map();
+  const linkGroups = new Map(); // タグ → 結ぶ単語（タグが付いた単語＋タグ名と同じ単語）
 
   const toArr = (v) =>
     (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\n,、]/) : [])
@@ -95,10 +96,14 @@
     const tagByNorm = new Map();
     for (const t of tagMap.keys()) tagByNorm.set(K.norm(t) || t, t);
     for (const w of words) w.selfTag = tagByNorm.get(K.norm(w.word) || w.word) || null;
+    for (const [t, ws] of tagMap) linkGroups.set(t, [...ws]);
+    for (const w of words) if (w.selfTag && !w.tags.includes(w.selfTag)) linkGroups.get(w.selfTag).push(w);
     // タグにより結びついた単語の数
+    const groupsOf = new Map(words.map((w) => [w, []]));
+    for (const g of linkGroups.values()) for (const w of g) groupsOf.get(w).push(g);
     for (const w of words) {
       const s = new Set();
-      for (const t of w.tags) for (const o of tagMap.get(t)) s.add(o);
+      for (const g of groupsOf.get(w)) for (const o of g) s.add(o);
       s.delete(w);
       w.linkCount = s.size;
     }
@@ -218,7 +223,7 @@
     const rnd = mulberry32(hashStr(nodes.map((d) => d.w.id).join('\u0001')));
     const index = new Map(nodes.map((d, i) => [d.w.id, i]));
     const groups = [];
-    for (const ws of tagMap.values()) if (ws.length > 1) groups.push(ws.map((w) => index.get(w.id)));
+    for (const ws of linkGroups.values()) if (ws.length > 1) groups.push(ws.map((w) => index.get(w.id)));
 
     const xs = new Float64Array(n), ys = new Float64Array(n);
     // 半幅・半高（枠同士の最低限の余白を含む）
@@ -398,7 +403,7 @@
     // 1. 候補線（各単語から近い同タグの単語へ＋距離だけの最小全域木）から、掛かる単語が少ない線を優先して木を作る
     const index = new Map(nodes.map((d, i) => [d.w.id, i]));
     const pairs = new Map();
-    for (const ws of tagMap.values()) {
+    for (const ws of linkGroups.values()) {
       const m = ws.length;
       if (m < 2) continue;
       const a = alphaFor(m);
@@ -520,7 +525,7 @@
       return null;
     }
     // 周囲の単語の角を経由点にした最短経路
-    function aroundBoxes(e, ax, ay, bx, by) {
+    function aroundBoxes(e, ax, ay, bx, by, off = 4) {
       const pad = 200;
       const l = Math.min(ax, bx) - pad, r = Math.max(ax, bx) + pad, t = Math.min(ay, by) - pad, btm = Math.max(ay, by) + pad;
       const obs = new Set();
@@ -542,7 +547,7 @@
       };
       const pts = [[ax, ay], [bx, by]];
       for (const o of near) for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        const x = xs[o] + sx * (LW[o] + 4), y = ys[o] + sy * (LH[o] + 4);
+        const x = xs[o] + sx * (LW[o] + off), y = ys[o] + sy * (LH[o] + off);
         if (!inside(x, y)) pts.push([x, y]);
       }
       const m = pts.length, dist = new Float64Array(m).fill(Infinity), prev = new Int32Array(m).fill(-1), done = new Uint8Array(m);
@@ -607,14 +612,77 @@
         u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
     }
 
+    // 曲がり具合（点列の最小の曲率半径）
+    function minRadius(pts) {
+      let r = Infinity;
+      for (let k = 1; k < pts.length - 1; k++) {
+        const ax = pts[k][0] - pts[k - 1][0], ay = pts[k][1] - pts[k - 1][1];
+        const bx = pts[k + 1][0] - pts[k][0], by = pts[k + 1][1] - pts[k][1];
+        const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+        if (!la || !lb) continue;
+        const turn = Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by) / (la * lb))));
+        if (turn > 1e-4) r = Math.min(r, (la + lb) / 2 / turn);
+      }
+      return r;
+    }
+    const sampleBezier = (a, c1, c2, b) => {
+      const n = Math.max(16, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 10));
+      const out = [];
+      for (let i = 0; i <= n; i++) out.push(bezier(a, c1, c2, b, i / n));
+      return out;
+    };
+    // 両端を結ぶゆるやかな弧（ふくらみの小さい順に試す）
+    function* arcs(A, B) {
+      const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+      const ux = (B[0] - A[0]) / len, uy = (B[1] - A[1]) / len, nx = -uy, ny = ux;
+      const at = (f, d) => [A[0] + ux * len * f + nx * d, A[1] + uy * len * f + ny * d];
+      for (const k of [0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.62, 0.75, 0.9, 1.1]) {
+        const d = Math.max(24, k * len);
+        for (const sg of [1, -1]) {
+          // 対称な弧と、片側に寄った弧
+          for (const [f1, f2, r1, r2] of [[1 / 3, 2 / 3, 1, 1], [0.2, 0.55, 1, 1], [0.45, 0.8, 1, 1], [0.25, 0.75, 1, 0.4], [0.25, 0.75, 0.4, 1]]) {
+            yield sampleBezier(A, at(f1, d * sg * r1), at(f2, d * sg * r2), B);
+          }
+        }
+      }
+      // ゆるやかな S 字
+      for (const k of [0.15, 0.25, 0.35, 0.5]) {
+        const d = Math.max(24, k * len);
+        for (const sg of [1, -1]) yield sampleBezier(A, at(1 / 3, d * sg), at(2 / 3, -d * sg), B);
+      }
+    }
+    const GENTLE = 40; // これより急なカーブは使わない（px）
+
     const bm = new Map();
     for (const e of edges) {
       const a = Math.round(e.a * 100) / 100;
       if (!bm.has(a)) bm.set(a, []);
-      let pts = [[xs[e.i], ys[e.i]], ...(e.via || []), [xs[e.j], ys[e.j]]];
+      const A = [xs[e.i], ys[e.i]], B = [xs[e.j], ys[e.j]];
+      let pts = [A, B];
       if (e.via) {
-        const cands = [spline(pts), rounded(pts, 80), rounded(pts, 40), rounded(pts, 20)];
-        pts = cands.find((c) => pathClear(c, e)) || pts;
+        let best = null;
+        // まずはゆるやかな弧で単語を避ける
+        if (performance.now() - t0 < 4000) {
+          for (const c of arcs(A, B)) if (minRadius(c) >= GENTLE && pathClear(c, e)) { best = c; break; }
+        }
+        // 弧で避けられなければ経由点を通る曲線。なるべくゆるやかなものを選ぶ
+        if (!best) {
+          const poly = [A, ...e.via, B];
+          let bestR = -1;
+          // 単語の角から離れた経由点ほど、ゆるやかに曲げられる
+          const polys = [poly];
+          if (performance.now() - t0 < 4500) for (const off of [48, 32, 20]) { const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off); if (v) polys.unshift([A, ...v, B]); }
+          search: for (const p of polys) {
+            for (const c of [spline(p), rounded(p, 120), rounded(p, 80), rounded(p, 40)]) {
+              if (!pathClear(c, e)) continue;
+              const r = minRadius(c);
+              if (r > bestR) { bestR = r; best = c; }
+              if (r >= GENTLE) break search;
+            }
+          }
+          if (!best) best = poly;
+        }
+        pts = best;
       }
       for (let k = 1; k < pts.length; k++) bm.get(a).push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
     }
