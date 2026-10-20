@@ -805,7 +805,7 @@
   }
 
   // タグの単語を下に並べる
-  function showRelated(tag) {
+  function showRelated(tag, byUser) {
     relTag = tag;
     if (view !== 'list') $$('.d-tags button', body).forEach((b) => b.classList.toggle('on', b.dataset.tag === tag));
     const rel = $('.rel', body);
@@ -818,12 +818,26 @@
         else closeDetail(() => goToWord(o, () => openFromNode(o)), true);
       }));
     }
+    if (!rel.firstChild && byUser) rel.append(el('div', 'none', 'リンクなし'));
     fitCells(rel);
     return rel;
   }
 
   // 一覧画面：拡大表示の中身だけを別の単語に切り替える
+  // 拡大表示の上端を今の位置で固定し、以降は下へ伸びるようにする
+  function pinPanel() {
+    if (wrap.style.alignItems) return;
+    const top = panel.getBoundingClientRect().top;
+    wrap.style.alignItems = 'flex-start';
+    wrap.style.paddingTop = top + 'px';
+  }
+  function unpinPanel() {
+    wrap.style.alignItems = '';
+    wrap.style.paddingTop = '';
+  }
+
   function swapDetail(o) {
+    unpinPanel();
     cur = { w: o, src: listCells.get(o.id) || null };
     fillDetail(o);
     if (o.selfTag) showRelated(o.selfTag);
@@ -851,6 +865,7 @@
     busy = true;
     cur = { w, src };
     relTag = null;
+    unpinPanel();
     fillDetail(w);
     detail.hidden = false;
     if (w.selfTag) showRelated(w.selfTag);
@@ -897,11 +912,9 @@
       closeDetail(() => setTagFilter(tag), true);
       return;
     }
-    const rel = showRelated(relTag === tag ? null : tag);
-    if (!relTag) return;
-    rel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
-    const rr = rel.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
-    if (rr.top > sr.bottom - 80) scroller.scrollBy({ top: rr.top - sr.bottom + Math.min(rr.height, sr.height * 0.5), behavior: 'smooth' });
+    pinPanel();
+    const rel = showRelated(relTag === tag ? null : tag, true);
+    if (relTag) rel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
   }
 
   $('.gsearch', panel).addEventListener('click', () => {
