@@ -63,6 +63,9 @@ a { color: inherit; }
 .cand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 70%; }
 .cand.on, .cand:hover { background: #000; color: #fff; }
 .cand.on small, .cand:hover small { color: #bbb; }
+/* 他の候補にマウスが乗っている間は、選択中の候補を白に戻す */
+#cands:hover .cand.on:not(:hover) { background: #fff; color: #000; }
+#cands:hover .cand.on:not(:hover) small { color: #888; }
 #topright { right: 16px; top: 16px; display: flex; gap: 8px; }
 #credit {
   right: 12px; bottom: 10px;
@@ -88,20 +91,36 @@ a { color: inherit; }
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
   padding: 16px;
 }
+/* SORT・FILTER・RETURN は同じ高さ（ボタン 28px ＋ 上下余白 4px ＋ 枠） */
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid #000; padding: 6px 8px; }
-.lbl { font-size: 13px; letter-spacing: .08em; color: #000; margin-right: 2px; }
-.group button { padding: 5px 10px; font-size: 13px; }
+.group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid #000; padding: 4px 8px; }
+.lbl { font-size: 13px; letter-spacing: .08em; color: #000; }
+.group button, select { height: 28px; padding: 0 10px; font-size: 13px; line-height: 1; }
 .group button.on { background: #000; color: #fff; }
+#return { height: 38px; padding: 0 14px; }
+.seg { display: flex; }
+.seg button + button { margin-left: -1px; }
 .sel { position: relative; display: inline-flex; align-items: center; }
 .sel span { font-size: 13px; padding: 0 6px 0 0; color: #000; }
 select {
   -webkit-appearance: none; appearance: none;
-  padding: 5px 10px; font-size: 13px; min-width: 56px; cursor: pointer;
+  min-width: 48px; cursor: pointer;
   text-align: center;
 }
 select.on { background: #000; color: #fff; }
-.chip { padding: 5px 10px; font-size: 13px; background: #000; color: #fff; }
+.group .pick { min-width: 48px; }
+.pick.on { background: #000; color: #fff; }
+.kana {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 5;
+  display: grid; grid-template-columns: repeat(5, 34px); gap: 4px;
+  padding: 8px; background: #fff; border: 1px solid #000;
+  max-height: 60vh; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable;
+}
+.kana button { width: 34px; height: 30px; padding: 0; font-size: 14px; letter-spacing: 0; }
+.kana button.on { background: #000; color: #fff; }
+.kana button:disabled { color: #ccc; border-color: #e3e3e3; cursor: default; background: #fff; }
+.kana .k-clear { grid-column: 1 / -1; width: auto; }
+.chip { background: #000; color: #fff; }
 .chip:hover { background: #fff; color: #000; }
 #grid, .rel {
   display: grid;
@@ -186,11 +205,11 @@ select.on { background: #000; color: #fff; }
   .cell.s-s { font-size: 10px; }
   .bar-in { padding: 10px 12px; gap: 8px; }
   .controls { gap: 6px; }
-  .group { padding: 4px 6px; gap: 4px; }
+  .group { padding: 3px 6px; gap: 6px; }
   .lbl, .sel span { font-size: 12px; letter-spacing: 0; }
   .sel span { padding-right: 4px; }
-  .group button, select { font-size: 12px; padding: 4px 7px; letter-spacing: 0; }
-  select { min-width: 40px; }
-  #return { font-size: 12px; padding: 5px 8px; letter-spacing: .04em; }
+  .group button, select { height: 26px; font-size: 12px; padding: 0 7px; letter-spacing: 0; }
+  select, .group .pick { min-width: 40px; }
+  #return { height: 34px; font-size: 12px; padding: 0 8px; letter-spacing: .04em; }
   #grid { padding: 0 12px; }
 }

@@ -27,10 +27,10 @@
     <div id="list" hidden>
       <div class="bar"><div class="bar-in">
         <div class="controls">
-          <div class="group"><span class="lbl">SORT</span><button data-sort="kana">あいう</button><button data-sort="mora">モーラ</button><button data-sort="link">タグリンク数</button></div>
+          <div class="group"><span class="lbl">SORT</span><div class="seg"><button data-sort="kana">あいう</button><button data-sort="mora">モーラ</button><button data-sort="link">タグリンク数</button></div></div>
           <div class="group"><span class="lbl">FILTER</span>
             <label class="sel"><span>モーラ</span><select id="fMora"></select></label>
-            <label class="sel"><span>頭文字</span><select id="fInit"></select></label>
+            <div class="sel"><span>頭文字</span><button id="fInit" class="pick">—</button><div id="kana" class="kana" hidden></div></div>
             <button id="fTag" class="chip" hidden></button>
           </div>
         </div>
@@ -55,11 +55,10 @@
       .map((s) => String(s).trim())
       .filter(Boolean);
 
-  // 頭文字の行（あいうえお／かきくけこ…）
-  const ROWS = ['あいうえお', 'かきくけこ', 'がぎぐげご', 'さしすせそ', 'ざじずぜぞ', 'たちつてと', 'だぢづでど', 'なにぬねの',
-    'はひふへほ', 'ばびぶべぼ', 'ぱぴぷぺぽ', 'まみむめも', 'やゆよ', 'らりるれろ', 'わをん', 'ゔ'];
+  // 頭文字の五十音表（5列。空白は空きマス）
+  const KANA_TABLE = ['あいうえお', 'かきくけこ', 'がぎぐげご', 'さしすせそ', 'ざじずぜぞ', 'たちつてと', 'だぢづでど', 'なにぬねの',
+    'はひふへほ', 'ばびぶべぼ', 'ぱぴぷぺぽ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わ   を', 'ん    ', 'ゔ    '];
   const SMALL_TO_BIG = { ぁ: 'あ', ぃ: 'い', ぅ: 'う', ぇ: 'え', ぉ: 'お', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ', ゎ: 'わ', っ: 'つ', ゕ: 'か', ゖ: 'け', ゐ: 'い', ゑ: 'え' };
-  const rowOf = (c) => ROWS.find((r) => r.includes(SMALL_TO_BIG[c] || c)) || null;
 
   function prepare(raw) {
     const seen = new Set();
@@ -80,7 +79,7 @@
       w.hira = K.toHira(w.reading || w.word);
       w.mora = K.mora(w.reading);
       w.initial = K.initial(w.reading);
-      w.row = rowOf(w.initial);
+      w.ini = SMALL_TO_BIG[w.initial] || w.initial;
       w.vlen = K.visualLength(w.word);
       w.keys = [w.word, w.reading, ...w.variants];
       words.push(w);
@@ -914,7 +913,7 @@
   /* ================= LIST ================= */
 
   const listEl = $('#list'), grid = $('#grid');
-  const fMora = $('#fMora'), fInit = $('#fInit'), fTag = $('#fTag');
+  const fMora = $('#fMora'), fInit = $('#fInit'), fTag = $('#fTag'), kanaBox = $('#kana');
   const state = { sort: 'kana', dir: 1, mora: null, initial: null, tag: null };
   const listCells = new Map();
   let fitTimer = 0;
@@ -928,10 +927,18 @@
     const opt = (v, t) => { const o = el('option', null, t); o.value = v; return o; };
     fMora.append(opt('', '—'));
     [...new Set(words.map((w) => w.mora))].sort((a, b) => a - b).forEach((m) => fMora.append(opt(m, m)));
-    fInit.append(opt('', '—'));
-    ROWS.filter((r) => words.some((w) => w.row === r)).forEach((r) => fInit.append(opt(r, r)));
+    buildKana();
     fMora.addEventListener('change', () => { state.mora = fMora.value === '' ? null : Number(fMora.value); renderList(true); });
-    fInit.addEventListener('change', () => { state.initial = fInit.value || null; renderList(true); });
+    fInit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      kanaBox.hidden = !kanaBox.hidden;
+      if (kanaBox.hidden) return;
+      // 画面からはみ出す場合は左へずらす
+      kanaBox.style.left = '0px';
+      const over = kanaBox.getBoundingClientRect().right - (innerWidth - 8);
+      if (over > 0) kanaBox.style.left = -over + 'px';
+    });
+    document.addEventListener('click', (e) => { if (!kanaBox.hidden && !kanaBox.contains(e.target)) kanaBox.hidden = true; });
     fTag.addEventListener('click', () => { state.tag = null; renderList(true); });
     $$('[data-sort]', listEl).forEach((b) => b.addEventListener('click', () => {
       const s = b.dataset.sort;
@@ -939,6 +946,30 @@
       else { state.sort = s; state.dir = 1; }
       renderList(true);
     }));
+  }
+
+  function buildKana() {
+    const have = new Set(words.map((w) => w.ini));
+    const clear = el('button', 'k-clear', '—');
+    clear.addEventListener('click', () => pickInitial(null));
+    kanaBox.append(clear);
+    for (const row of KANA_TABLE) {
+      const cells = row.split('');
+      if (!cells.some((c) => have.has(c))) continue;
+      for (const c of cells) {
+        if (c === ' ') { kanaBox.append(el('span')); continue; }
+        const b = el('button', null, c);
+        b.dataset.c = c;
+        b.disabled = !have.has(c);
+        b.addEventListener('click', () => pickInitial(c));
+        kanaBox.append(b);
+      }
+    }
+  }
+  function pickInitial(c) {
+    state.initial = c;
+    kanaBox.hidden = true;
+    renderList(true);
   }
 
   function setTagFilter(tag) {
@@ -949,7 +980,7 @@
   function renderList(toTop) {
     const arr = words.filter((w) =>
       (state.mora == null || w.mora === state.mora) &&
-      (!state.initial || w.row === state.initial) &&
+      (!state.initial || w.ini === state.initial) &&
       (!state.tag || w.tags.includes(state.tag) || w.selfTag === state.tag));
     const key = state.sort === 'mora' ? (w) => w.mora : state.sort === 'link' ? (w) => w.linkCount : null;
     arr.sort((a, b) => (key ? (key(a) - key(b)) * state.dir || kanaCmp(a, b) : kanaCmp(a, b) * state.dir));
@@ -971,7 +1002,8 @@
       b.textContent = SORT_LABEL[b.dataset.sort] + (on ? (state.dir > 0 ? ' ↑' : ' ↓') : '');
     });
     fMora.value = state.mora == null ? '' : String(state.mora);
-    fInit.value = state.initial || '';
+    fInit.textContent = state.initial || '—';
+    $$('[data-c]', kanaBox).forEach((b) => b.classList.toggle('on', b.dataset.c === state.initial));
     fMora.classList.toggle('on', state.mora != null);
     fInit.classList.toggle('on', !!state.initial);
     fTag.hidden = !state.tag;
