@@ -155,7 +155,8 @@
   const nodeById = new Map();
   let buckets = [];
   const bounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-  const cam = { x: 0, y: 0, z: 1 }; // z: 拡大率
+  const Z_START = 1.2; // 最初の拡大率
+  const cam = { x: 0, y: 0, z: Z_START }; // z: 拡大率
   let W = innerWidth, H = innerHeight, dpr = 1;
 
   function mulberry32(a) {
@@ -204,6 +205,7 @@
       bounds.maxY = Math.max(...nodes.map((n) => n.y + n.bh / 2));
       const start = nodes[Math.floor(Math.random() * nodes.length)];
       cam.x = start.x; cam.y = start.y;
+      cam.z = Math.max(zMin(), Z_START);
       clampPt(cam);
     }
     paint();
@@ -318,7 +320,7 @@
   }
 
   // 登録数の少ないタグほど濃く
-  const alphaFor = (m) => Math.max(0.08, 0.55 / (1 + 0.9 * Math.log2(m / 2)));
+  const alphaFor = (m) => Math.max(0.05, 0.4 / (1 + 1.3 * Math.log2(m / 2)));
 
   // 線分が長方形に掛かるか（Liang–Barsky）
   function segHitsRect(x1, y1, x2, y2, l, t, r, b) {
@@ -567,11 +569,53 @@
       e.via = oneBend(e, ax, ay, bx, by) || (performance.now() - t0 < 3000 ? aroundBoxes(e, ax, ay, bx, by) : null);
     }
 
+    // 点列が単語に掛からないか
+    const pathClear = (pts, e) => {
+      for (let k = 1; k < pts.length; k++) if (!clear(pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1], e)) return false;
+      return true;
+    };
+    // 経由点を通るなめらかな曲線（Catmull-Rom）を細かい点列にする
+    function spline(pts) {
+      const out = [pts[0]];
+      for (let k = 0; k < pts.length - 1; k++) {
+        const p0 = pts[Math.max(0, k - 1)], p1 = pts[k], p2 = pts[k + 1], p3 = pts[Math.min(pts.length - 1, k + 2)];
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        const steps = Math.max(8, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 12));
+        for (let i = 1; i <= steps; i++) out.push(bezier(p1, c1, c2, p2, i / steps));
+      }
+      return out;
+    }
+    // 角だけを丸めた点列（半径 r まで）
+    function rounded(pts, r) {
+      const out = [pts[0]];
+      for (let k = 1; k < pts.length - 1; k++) {
+        const p = pts[k], q = pts[k - 1], n = pts[k + 1];
+        const d1 = Math.hypot(q[0] - p[0], q[1] - p[1]), d2 = Math.hypot(n[0] - p[0], n[1] - p[1]);
+        const rr = Math.min(r, d1 * 0.45, d2 * 0.45);
+        const a = [p[0] + (q[0] - p[0]) * rr / d1, p[1] + (q[1] - p[1]) * rr / d1];
+        const b = [p[0] + (n[0] - p[0]) * rr / d2, p[1] + (n[1] - p[1]) * rr / d2];
+        out.push(a);
+        for (let i = 1; i <= 10; i++) out.push(bezier(a, p, p, b, i / 10));
+      }
+      out.push(pts[pts.length - 1]);
+      return out;
+    }
+    function bezier(a, b, c, d, t) {
+      const u = 1 - t;
+      return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0],
+        u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
+    }
+
     const bm = new Map();
     for (const e of edges) {
-      const a = Math.round(e.a * 50) / 50;
+      const a = Math.round(e.a * 100) / 100;
       if (!bm.has(a)) bm.set(a, []);
-      const pts = [[xs[e.i], ys[e.i]], ...(e.via || []), [xs[e.j], ys[e.j]]];
+      let pts = [[xs[e.i], ys[e.i]], ...(e.via || []), [xs[e.j], ys[e.j]]];
+      if (e.via) {
+        const cands = [spline(pts), rounded(pts, 80), rounded(pts, 40), rounded(pts, 20)];
+        pts = cands.find((c) => pathClear(c, e)) || pts;
+      }
       for (let k = 1; k < pts.length; k++) bm.get(a).push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
     }
     buckets = [...bm.entries()].sort((x, y) => x[0] - y[0]).map(([alpha, lines]) => ({ alpha, lines }));
@@ -581,7 +625,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const z = cam.z, ox = Math.round(W / 2 - cam.x * z), oy = Math.round(H / 2 - cam.y * z);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = dpr >= 1.5 ? 1 / dpr : 0.6;
+    ctx.lineJoin = 'round';
     for (const b of buckets) {
       ctx.strokeStyle = `rgba(0,0,0,${b.alpha})`;
       ctx.beginPath();
