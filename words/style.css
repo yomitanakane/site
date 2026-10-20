@@ -88,8 +88,8 @@ a { color: inherit; }
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
   padding: 16px;
 }
-.controls { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
-.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; border: 1px solid #000; padding: 6px 8px; }
 .lbl { font-size: 13px; letter-spacing: .08em; color: #000; margin-right: 2px; }
 .group button { padding: 5px 10px; font-size: 13px; }
 .group button.on { background: #000; color: #fff; }
@@ -184,6 +184,13 @@ select.on { background: #000; color: #fff; }
   .cell { min-height: 36px; padding: 5px 4px; font-size: 14px; }
   .cell.s-m { font-size: 11px; }
   .cell.s-s { font-size: 10px; }
-  .bar-in { padding: 12px; }
+  .bar-in { padding: 10px 12px; gap: 8px; }
+  .controls { gap: 6px; }
+  .group { padding: 4px 6px; gap: 4px; }
+  .lbl, .sel span { font-size: 12px; letter-spacing: 0; }
+  .sel span { padding-right: 4px; }
+  .group button, select { font-size: 12px; padding: 4px 7px; letter-spacing: 0; }
+  select { min-width: 40px; }
+  #return { font-size: 12px; padding: 5px 8px; letter-spacing: .04em; }
   #grid { padding: 0 12px; }
 }

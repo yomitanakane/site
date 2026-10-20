@@ -27,7 +27,7 @@
     <div id="list" hidden>
       <div class="bar"><div class="bar-in">
         <div class="controls">
-          <div class="group"><span class="lbl">SORT</span><button data-sort="kana">あいう</button><button data-sort="mora">モーラ</button><button data-sort="link">タグリンク</button></div>
+          <div class="group"><span class="lbl">SORT</span><button data-sort="kana">あいう</button><button data-sort="mora">モーラ</button><button data-sort="link">タグリンク数</button></div>
           <div class="group"><span class="lbl">FILTER</span>
             <label class="sel"><span>モーラ</span><select id="fMora"></select></label>
             <label class="sel"><span>頭文字</span><select id="fInit"></select></label>
@@ -40,7 +40,7 @@
     </div>
     <div id="detail" hidden>
       <div class="backdrop"></div>
-      <div class="wrap"><div class="panel"><button class="gsearch">検索</button><div class="scroll"><div class="body"></div></div></div></div>
+      <div class="wrap"><div class="panel"><button class="gsearch">このワードで検索</button><div class="scroll"><div class="body"></div></div></div></div>
     </div>
     <div id="ghost" hidden></div>`;
 
@@ -54,6 +54,12 @@
     (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[\n,、]/) : [])
       .map((s) => String(s).trim())
       .filter(Boolean);
+
+  // 頭文字の行（あいうえお／かきくけこ…）
+  const ROWS = ['あいうえお', 'かきくけこ', 'がぎぐげご', 'さしすせそ', 'ざじずぜぞ', 'たちつてと', 'だぢづでど', 'なにぬねの',
+    'はひふへほ', 'ばびぶべぼ', 'ぱぴぷぺぽ', 'まみむめも', 'やゆよ', 'らりるれろ', 'わをん', 'ゔ'];
+  const SMALL_TO_BIG = { ぁ: 'あ', ぃ: 'い', ぅ: 'う', ぇ: 'え', ぉ: 'お', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ', ゎ: 'わ', っ: 'つ', ゕ: 'か', ゖ: 'け', ゐ: 'い', ゑ: 'え' };
+  const rowOf = (c) => ROWS.find((r) => r.includes(SMALL_TO_BIG[c] || c)) || null;
 
   function prepare(raw) {
     const seen = new Set();
@@ -74,6 +80,7 @@
       w.hira = K.toHira(w.reading || w.word);
       w.mora = K.mora(w.reading);
       w.initial = K.initial(w.reading);
+      w.row = rowOf(w.initial);
       w.vlen = K.visualLength(w.word);
       w.keys = [w.word, w.reading, ...w.variants];
       words.push(w);
@@ -129,7 +136,10 @@
     if (!nq) return [];
     const res = [];
     for (const w of words) {
-      const s = K.matchScore(nq, w.keys, false);
+      // 名前（言葉・読み・別表記）→ タグ → 説明文 の順に並べる
+      let s = K.matchScore(nq, w.keys, false);
+      if (s === Infinity) { const t = K.matchScore(nq, w.tags, false); if (t < Infinity) s = 10 + t; }
+      if (s === Infinity && w.meaning && K.norm(w.meaning).includes(nq)) s = 20;
       if (s < Infinity) res.push([s, w]);
     }
     res.sort((a, b) => a[0] - b[0] || a[1].hira.length - b[1].hira.length || kanaCmp(a[1], b[1]));
@@ -912,14 +922,14 @@
     clearTimeout(fitTimer);
     fitTimer = setTimeout(() => { if (!listEl.hidden) fitCells(grid); if (!detail.hidden) fitCells(body); }, 120);
   });
-  const SORT_LABEL = { kana: 'あいう', mora: 'モーラ', link: 'タグリンク' };
+  const SORT_LABEL = { kana: 'あいう', mora: 'モーラ', link: 'タグリンク数' };
 
   function buildListControls() {
     const opt = (v, t) => { const o = el('option', null, t); o.value = v; return o; };
     fMora.append(opt('', '—'));
     [...new Set(words.map((w) => w.mora))].sort((a, b) => a - b).forEach((m) => fMora.append(opt(m, m)));
     fInit.append(opt('', '—'));
-    [...new Set(words.map((w) => w.initial).filter(Boolean))].sort(collator.compare).forEach((c) => fInit.append(opt(c, c)));
+    ROWS.filter((r) => words.some((w) => w.row === r)).forEach((r) => fInit.append(opt(r, r)));
     fMora.addEventListener('change', () => { state.mora = fMora.value === '' ? null : Number(fMora.value); renderList(true); });
     fInit.addEventListener('change', () => { state.initial = fInit.value || null; renderList(true); });
     fTag.addEventListener('click', () => { state.tag = null; renderList(true); });
@@ -939,7 +949,7 @@
   function renderList(toTop) {
     const arr = words.filter((w) =>
       (state.mora == null || w.mora === state.mora) &&
-      (!state.initial || w.initial === state.initial) &&
+      (!state.initial || w.row === state.initial) &&
       (!state.tag || w.tags.includes(state.tag) || w.selfTag === state.tag));
     const key = state.sort === 'mora' ? (w) => w.mora : state.sort === 'link' ? (w) => w.linkCount : null;
     arr.sort((a, b) => (key ? (key(a) - key(b)) * state.dir || kanaCmp(a, b) : kanaCmp(a, b) * state.dir));
