@@ -22,8 +22,8 @@
   document.getElementById('app').innerHTML = `
     <div id="map"><canvas id="lines"></canvas><div id="world"></div></div>
     <div id="search" class="ui"><input id="q" type="text" placeholder="SEARCH" autocomplete="off" spellcheck="false" enterkeyhint="go"><div id="cands"></div></div>
-    <div id="topright" class="ui"><button id="warp">WARP</button><button id="toList">LIST</button></div>
-    <a id="credit" class="ui" href="https://yomitanakane.com/">CREDIT</a>
+    <div id="topright" class="ui"><button id="about">ABOUT</button><button id="warp">WARP</button><button id="toList">LIST</button></div>
+    <a id="credit" class="ui" href="https://yomitanakane.com/" target="_blank" rel="noopener">CREDIT</a>
     <div id="list" hidden>
       <div class="bar"><div class="bar-in">
         <div class="controls">
@@ -571,6 +571,7 @@
   // 一覧画面：拡大表示の中身だけを別の単語に切り替える
   function swapDetail(o) {
     cur = { w: o, src: listCells.get(o.id) || null };
+    gsearch.hidden = false;
     fillDetail(o);
     scroller.scrollTop = 0;
     scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
@@ -596,10 +597,16 @@
   };
 
   function openDetail(w, fromRect, src) {
-    if (busy || !w) return;
+    if (!w) return;
+    openPanel(() => fillDetail(w), { w, src }, fromRect);
+  }
+  // 拡大表示の枠を開く（fill で中身を作る。cur.w が無い時は Google 検索ボタンを出さない）
+  function openPanel(fill, state, fromRect) {
+    if (busy) return;
     busy = true;
-    cur = { w, src };
-    fillDetail(w);
+    cur = state;
+    fill();
+    gsearch.hidden = !state.w;
     detail.hidden = false;
     scroller.scrollTop = 0;
     panel.style.visibility = 'hidden';
@@ -640,11 +647,41 @@
   }
 
   $('.close', panel).addEventListener('click', () => closeDetail());
-  $('.gsearch', panel).addEventListener('click', () => {
-    if (cur) window.open('https://www.google.com/search?q=' + encodeURIComponent(cur.w.word), '_blank', 'noopener');
+  const gsearch = $('.gsearch', panel);
+  gsearch.addEventListener('click', () => {
+    if (cur && cur.w) window.open('https://www.google.com/search?q=' + encodeURIComponent(cur.w.word), '_blank', 'noopener');
   });
   wrap.addEventListener('click', (e) => { if (e.target === wrap) closeDetail(); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !detail.hidden) closeDetail(); });
+
+  /* ================= ABOUT ================= */
+
+  // 説明文中の、画面上の部品を模した飾り（押せない）
+  const chip = (cls, text) => el('span', 'ex ' + cls, text);
+  function fillAbout() {
+    body.textContent = '';
+    const head = el('div', 'd-head');
+    head.append(el('div', 'd-word', 'ABOUT'));
+    const box = el('div', 'about');
+    const lead = el('p');
+    const a = el('a', null, '読谷あかね');
+    a.href = 'https://yomitanakane.com/'; a.target = '_blank'; a.rel = 'noopener';
+    lead.append(a, 'が蒐集した言葉を雑多に眺めることを目的にしたサイトです。');
+    const ul = el('ul');
+    const li = (...parts) => { const e = el('li'); e.append(...parts); ul.append(e); };
+    li(chip('ex-word', '言葉'), 'をクリックすると詳細情報が表示されます。');
+    li('共通するタグにより紐づいた別の言葉が下部に表示されます。');
+    li(chip('ex-tag', 'タグ'), 'を押すとマップ上の結びつきが分かりやすくなります。');
+    li(chip('ex-btn', 'WARP'), 'ボタンでランダムな地点に移動します。');
+    li(chip('ex-btn', 'LIST'), '画面では単語が一覧表示されます。ソートや絞り込みも可能です。');
+    const note = el('p', null, '性質上間違った情報が書き込まれている可能性もあるため、鵜呑みにしすぎず、ファクトチェックは適宜行ってください。そして間違った箇所があったらコッソリ教えてください。');
+    box.append(lead, ul, note);
+    body.append(head, box);
+  }
+  $('#about').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    openPanel(fillAbout, { w: null, src: b }, b.getBoundingClientRect());
+  });
 
   /* ================= LIST ================= */
 

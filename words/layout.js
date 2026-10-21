@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L1';
+  const VERSION = 'L2';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -103,10 +103,10 @@
   const MOVE_MAX = 300;
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
   /*
-   * タグの結びつきの強さ。単語の少ないタグほど強い（2語のタグ＝1）。
+   * タグの結びつきの強さ。単語の少ないタグほど強い（2語・3〜4語のタグは特に強く、5語からは弱まっていく）。
    * 少ないタグ同士でつながった単語ほど近くに集まる。
    */
-  const strength = (m) => 1 / Math.max(1, m - 1);
+  const strength = (m) => (m <= 2 ? 1.5 : m <= 4 ? 1.1 : 1 / Math.max(1, m - 3));
 
   // タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
   function place(nodes, groups) {
@@ -134,10 +134,11 @@
       else { const p = disc(R); xs[i] = p[0]; ys[i] = p[1]; }
     }
     // 各タグの単語が収まる半径の外側にいる時だけ引き寄せる。少ないタグほど強く、小さくまとめる
+    // （特に強いタグは半径 0 ＝常に中心へ引き寄せる。重なりは後の配置で解消される）
     const GAP = 44;
     const areaOf = (i) => (hw[i] * 2 + GAP) * (hh[i] * 2 + GAP);
-    const gr = groups.map((g, gi) => Math.sqrt(g.reduce((s, i) => s + areaOf(i), 0) / Math.PI) * (0.4 + 1.1 * (1 - gs[gi])));
-    const pull = gs.map((s) => 0.8 * s);
+    const gr = groups.map((g, gi) => Math.sqrt(g.reduce((s, i) => s + areaOf(i), 0) / Math.PI) * Math.max(0, 0.4 + 1.1 * (1 - gs[gi])));
+    const pull = gs.map((s) => 1.2 * s);
     let total = 0;
     for (let i = 0; i < n; i++) total += areaOf(i);
     const R0 = Math.sqrt(total / Math.PI) * 0.8;
