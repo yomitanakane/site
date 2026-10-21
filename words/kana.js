@@ -6,10 +6,21 @@
   const SMALL = new Set(['ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ゃ', 'ゅ', 'ょ', 'ゎ']);
   const IGNORE = /[\s　・･\-‐‑–—―－ー〜～~_.,，．、。'"’‘”“「」『』()（）\[\]［］【】〈〉《》!！?？:：;；\/／\\＼&＆]/g;
 
+  // 比較・計算用のひらがな（「う゛」は「ゔ」にまとめる）
   function toHira(s) {
     return String(s == null ? '' : s)
+      .replace(/゛/g, '゙').replace(/゜/g, '゚')
       .normalize('NFKC')
       .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  }
+
+  // 登録する読みの表記：カタカナはひらがなに、「ヴ」「ゔ」は「う゛」にする
+  const VU = { ヴ: 'う゛', ゔ: 'う゛', ヷ: 'わ゛', ヸ: 'ゐ゛', ヹ: 'ゑ゛', ヺ: 'を゛' };
+  function toReading(s) {
+    return String(s == null ? '' : s)
+      .replace(/[ｦ-ﾟ]+/g, (m) => m.normalize('NFKC'))
+      .replace(/[ヴゔヷ-ヺ]/g, (c) => VU[c])
+      .replace(/[ァ-ヶヽヾ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
   }
 
   function isKana(c) {
@@ -81,7 +92,7 @@
     return best;
   }
 
-  const Kana = { toHira, isKana, mora, initial, norm, visualLength, matchScore };
+  const Kana = { toHira, toReading, isKana, mora, initial, norm, visualLength, matchScore };
   if (typeof module !== 'undefined' && module.exports) module.exports = Kana;
   else root.Kana = Kana;
 })(this);

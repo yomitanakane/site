@@ -159,6 +159,8 @@
   let nodes = [];
   const nodeById = new Map();
   let buckets = [];
+  const tagLines = new Map(); // タグ → そのタグの線分（強調表示用）
+  let hiTag = null; // 強調表示中のタグ
   const bounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
   const Z_START = 1.2; // 最初の拡大率
   const cam = { x: 0, y: 0, z: Z_START }; // z: 拡大率
@@ -184,7 +186,7 @@
   const OCCUPANCY = 0.1;
   const MOVE_MAX = 300;
   // 配置の計算方法を変えたら上げる（保存済みの配置を使わなくなる）
-  const LAYOUT_VERSION = 'v4';
+  const LAYOUT_VERSION = 'v5';
   const LAYOUT_CACHE = 'words-layout';
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
 
@@ -217,7 +219,7 @@
     } catch (e) { /* 保存領域が使えない場合は毎回計算する */ }
     if (cached) {
       nodes.forEach((n, i) => { n.x = cached.pos[i][0]; n.y = cached.pos[i][1]; });
-      buckets = cached.buckets;
+      setDrawn(cached.edges);
     } else {
       layout();
       buildEdges(() => {
@@ -226,7 +228,7 @@
           localStorage.setItem(LAYOUT_CACHE, JSON.stringify({
             sig,
             pos: nodes.map((n) => [r(n.x), r(n.y)]),
-            buckets: buckets.map((b) => ({ alpha: b.alpha, lines: b.lines.map((l) => l.map(r)) })),
+            edges: drawnEdges.map((e) => ({ a: e.alpha, t: e.tags, l: e.lines.map((l) => l.map(r)) })),
           }));
         } catch (e) { /* 容量不足などは無視 */ }
       });
@@ -245,6 +247,18 @@
       clampPt(cam);
     }
     paint();
+  }
+
+  let drawnEdges = [];
+  function setDrawn(list) {
+    const bm = new Map();
+    tagLines.clear();
+    for (const e of list) {
+      if (!bm.has(e.a)) bm.set(e.a, []);
+      bm.get(e.a).push(...e.l);
+      for (const t of e.t) { if (!tagLines.has(t)) tagLines.set(t, []); tagLines.get(t).push(...e.l); }
+    }
+    buckets = [...bm.entries()].sort((x, y) => x[0] - y[0]).map(([alpha, lines]) => ({ alpha, lines }));
   }
 
   // タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
@@ -425,6 +439,8 @@
   function buildEdges(onDone) {
     const n = nodes.length;
     buckets = [];
+    drawnEdges = [];
+    tagLines.clear();
     if (!n) return;
     const t0 = performance.now();
     const alphaFor = alphaScale();
@@ -465,7 +481,7 @@
     // 1. 候補線（各単語から近い同タグの単語へ＋距離だけの最小全域木）から、掛かる単語が少ない線を優先して木を作る
     const index = new Map(nodes.map((d, i) => [d.w.id, i]));
     const pairs = new Map();
-    for (const ws of linkGroups.values()) {
+    for (const [tag, ws] of linkGroups) {
       const m = ws.length;
       if (m < 2) continue;
       const a = alphaFor(m);
@@ -506,8 +522,8 @@
         parent[ru] = rv;
         const i = Math.min(ids[u], ids[v]), j = Math.max(ids[u], ids[v]);
         const e = pairs.get(i * n + j);
-        if (!e) pairs.set(i * n + j, { i, j, a });
-        else if (a > e.a) e.a = a;
+        if (!e) pairs.set(i * n + j, { i, j, a, tags: [tag] });
+        else { if (a > e.a) e.a = a; e.tags.push(tag); }
       }
     }
     const edges = [...pairs.values()];
@@ -751,8 +767,11 @@
     }
     buckets = [...bm.entries()].sort((x, y) => x[0] - y[0]).map(([alpha, lines]) => ({ alpha, lines }));
     const draw = (e, pts) => {
-      const L = bm.get(e.alpha);
-      for (let k = 1; k < pts.length; k++) L.push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
+      const L = bm.get(e.alpha), segs = [];
+      for (let k = 1; k < pts.length; k++) segs.push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
+      L.push(...segs);
+      for (const t of e.tags) { if (!tagLines.has(t)) tagLines.set(t, []); tagLines.get(t).push(...segs); }
+      drawnEdges.push({ alpha: e.alpha, tags: e.tags, lines: segs });
     };
     // 単語に掛からない線はすぐに描く
     for (const e of edges) if (!e.blocked) draw(e, [[xs[e.i], ys[e.i]], [xs[e.j], ys[e.j]]]);
@@ -791,6 +810,21 @@
       }
       ctx.stroke();
     }
+    const hi = hiTag && tagLines.get(hiTag);
+    if (hi) {
+      ctx.strokeStyle = '#b51d50';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (const l of hi) {
+        const x1 = l[0] * z + ox, y1 = l[1] * z + oy, x2 = l[2] * z + ox, y2 = l[3] * z + oy;
+        if ((x1 < 0 && x2 < 0) || (x1 > W && x2 > W) || (y1 < 0 && y2 < 0) || (y1 > H && y2 > H)) continue;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
   }
 
   function paint() {
@@ -802,8 +836,8 @@
   const render = () => { if (!rafId) rafId = requestAnimationFrame(() => { rafId = 0; paint(); }); };
 
   // 画面が単語のある範囲（＋余白）からはみ出さないようにする
-  function clampPt(p) {
-    const z = cam.z, m = 100 / z, hw = W / 2 / z, hh = H / 2 / z;
+  function clampPt(p, z = cam.z) {
+    const m = 100 / z, hw = W / 2 / z, hh = H / 2 / z;
     const lx = bounds.minX - m + hw, hx = bounds.maxX + m - hw;
     const ly = bounds.minY - m + hh, hy = bounds.maxY + m - hh;
     p.x = lx > hx ? (bounds.minX + bounds.maxX) / 2 : Math.min(hx, Math.max(lx, p.x));
@@ -838,16 +872,19 @@
 
   let flyId = 0;
   function stopFly() { if (flyId) cancelAnimationFrame(flyId); flyId = 0; }
-  function flyTo(x, y, done) {
+  function flyTo(x, y, done, z) {
     stopFly();
-    const t = clampPt({ x, y });
+    const sz = cam.z, tz = z == null ? sz : Math.min(Z_MAX, Math.max(zMin(), z));
+    const t = clampPt({ x, y }, tz);
     const sx = cam.x, sy = cam.y;
     const dist = Math.hypot(t.x - sx, t.y - sy);
-    if (dist < 1) { if (done) done(); return; }
-    const dur = Math.min(700, 260 + dist * 0.12);
+    const zoom = Math.abs(Math.log(tz / sz));
+    if (dist < 1 && zoom < 0.01) { if (done) done(); return; }
+    const dur = Math.min(zoom < 0.01 ? 700 : 900, 260 + dist * 0.12 + zoom * 300);
     const t0 = performance.now();
     const step = (now) => {
       const p = Math.min(1, (now - t0) / dur), e = ease(p);
+      cam.z = sz * Math.pow(tz / sz, e);
       cam.x = sx + (t.x - sx) * e; cam.y = sy + (t.y - sy) * e;
       paint();
       if (p < 1) flyId = requestAnimationFrame(step);
@@ -856,16 +893,36 @@
     flyId = requestAnimationFrame(step);
   }
 
+  // タグで結ばれた単語がすべて映るようにカメラを動かし、そのタグの線を強調する
+  function highlightTag(tag) {
+    const ns = (linkGroups.get(tag) || []).map((w) => nodeById.get(w.id)).filter(Boolean);
+    if (!ns.length) return;
+    hiTag = tag;
+    const l = Math.min(...ns.map((n) => n.x - n.bw / 2)), r = Math.max(...ns.map((n) => n.x + n.bw / 2));
+    const t = Math.min(...ns.map((n) => n.y - n.bh / 2)), b = Math.max(...ns.map((n) => n.y + n.bh / 2));
+    // 左上の検索欄・右上のボタンにかからない余白をとる
+    const z = Math.min(Z_START, (W - 80) / Math.max(1, r - l), (H - 150) / Math.max(1, b - t));
+    flyTo((l + r) / 2, (t + b) / 2, null, z);
+    render();
+  }
+  function clearHighlight() {
+    if (!hiTag) return;
+    hiTag = null;
+    render();
+  }
+
   function flash(n) {
     n.el.classList.add('flash');
     setTimeout(() => n.el.classList.remove('flash'), 260);
   }
   function goToWord(w, done) {
+    clearHighlight();
     const n = nodeById.get(w.id);
     if (!n) return;
     flyTo(n.x, n.y, () => { flash(n); if (done) done(); });
   }
   function openFromNode(w) {
+    clearHighlight();
     const n = nodeById.get(w.id);
     openDetail(w, n.el.getBoundingClientRect(), n.el);
   }
@@ -946,6 +1003,7 @@
 
   $('#warp').addEventListener('click', () => {
     if (!nodes.length) return;
+    clearHighlight();
     let pool = nodes.filter((n) => Math.hypot(n.x - cam.x, n.y - cam.y) > Math.min(W, H) * 0.6 / cam.z);
     if (!pool.length) pool = nodes;
     const n = pool[Math.floor(Math.random() * pool.length)];
@@ -1027,8 +1085,15 @@
     }
     body.append(head);
     if (w.meaning) {
+      // 「>」で始まる行は引用（続く引用行は1つの帯にまとめる）
       const m = el('div', 'd-mean');
-      m.append(el('div', null, w.meaning));
+      let block = null, quote = false;
+      for (const line of w.meaning.split('\n')) {
+        const q = /^\s*[>＞]/.test(line);
+        if (!block || q !== quote) { block = el('div', q ? 'quote' : null); m.append(block); quote = q; }
+        else block.append('\n');
+        block.append(q ? line.replace(/^\s*[>＞]\s?/, '') : line);
+      }
       body.append(m);
     }
     if (w.links) {
@@ -1048,10 +1113,16 @@
       groups.get(key).tags.push(tag);
     }
     if (groups.size) {
-      const box = el('div', 'd-tags');
+      // タグ部分は5行ほどの高さで、それより多ければこの中だけでスクロール
+      const outer = el('div', 'd-tags'), box = el('div', 'd-tags-in');
+      outer.append(box);
       for (const { tags, list } of groups.values()) {
         const row = el('div', 'd-tagrow');
-        for (const tag of tags) row.append(el('span', 'tag', tag));
+        for (const tag of tags) {
+          const b = el('button', 'tag', tag);
+          b.addEventListener('click', () => showTag(tag));
+          row.append(b);
+        }
         box.append(row);
         if (!list.length) continue;
         const ws = el('div', 'd-rel');
@@ -1065,8 +1136,14 @@
         }
         box.append(ws);
       }
-      body.append(box);
+      body.append(outer);
     }
+  }
+
+  // タグを押した時：マップではそのタグの線を強調して全体が映る位置へ、一覧ではそのタグで絞り込む
+  function showTag(tag) {
+    if (view === 'list') { closeDetail(() => setTagFilter(tag), true); return; }
+    closeDetail(() => highlightTag(tag), true);
   }
 
   // 一覧画面：拡大表示の中身だけを別の単語に切り替える
@@ -1255,6 +1332,7 @@
     if (view === 'list') return;
     view = 'list';
     closeDetailNow();
+    clearHighlight();
     clearTimeout(listTimer);
     listEl.hidden = false;
     listEl.classList.add('fade');

@@ -192,10 +192,19 @@ select.on { background: #000; color: #fff; }
 .d-var span + span::before { content: "／"; color: #aaa; margin: 0 .5em; }
 .d-mean { font-size: 18px; line-height: 1.8; }
 .d-mean > div { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* 「>」で始まる行（引用）は薄いグレーの帯 */
+.d-mean > .quote { background: #efefef; padding: 2px 12px; margin: 4px 0; }
 .d-links { font-size: 11px; color: #555; line-height: 1.7; }
 .d-links > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* タグと、それに紐づく単語 */
-.d-tags { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+/* タグ部分は5行ほど（単語ボタン1行 ≒ 37px）まで表示し、残りはこの中だけでスクロール */
+.d-tags-in {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  max-height: calc(5 * 37px); overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.d-tagrow .tag { cursor: pointer; }
+.d-tagrow .tag:hover { background: #000; border-color: #000; color: #fff; }
 /* 説明文との区切り線。説明文〜線の間隔を、枠の上端〜単語名の間隔と同じにする（18px は .body の gap） */
 .body > .d-tags { margin-top: calc(var(--strip) + var(--top) - 18px); border-top: 1px solid #000; padding-top: 20px; }
 .d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
