@@ -180,9 +180,11 @@
   // 単語同士の最低限の余白（左右・上下それぞれ片側ぶん）
   const SPACE_X = 30, SPACE_Y = 24;
   // 線をよけるために単語をずらす最大距離（これ以上遠くへは動かさない）
+  // 単語の枠の面積の合計が、配置する円の面積に占める割合（小さいほどゆったり。単語数によらず一定）
+  const OCCUPANCY = 0.1;
   const MOVE_MAX = 300;
   // 配置の計算方法を変えたら上げる（保存済みの配置を使わなくなる）
-  const LAYOUT_VERSION = 'v3';
+  const LAYOUT_VERSION = 'v4';
   const LAYOUT_CACHE = 'words-layout';
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
 
@@ -317,6 +319,21 @@
         const s = l > maxStep ? maxStep / l : 1;
         xs[i] += dx[i] * s; ys[i] += dy[i] * s;
       }
+    }
+
+    // 単語が増えても密度が変わらないよう、中心からの距離を「単語1つあたりの面積が一定」の円盤に並べ直す
+    // （中心から見た方向と、中心からの近さの順番はそのまま）
+    {
+      let cx = 0, cy = 0, box = 0;
+      for (let i = 0; i < n; i++) { cx += xs[i]; cy += ys[i]; box += nodes[i].bw * nodes[i].bh; }
+      cx /= n; cy /= n; box /= n;
+      const R = Math.sqrt((n * box) / OCCUPANCY / Math.PI);
+      const byDist = Array.from({ length: n }, (_, i) => i)
+        .sort((p, q) => Math.hypot(xs[p] - cx, ys[p] - cy) - Math.hypot(xs[q] - cx, ys[q] - cy));
+      byDist.forEach((i, k) => {
+        const a = Math.atan2(ys[i] - cy, xs[i] - cx), r = R * Math.sqrt((k + 0.5) / n);
+        xs[i] = Math.cos(a) * r; ys[i] = Math.sin(a) * r;
+      });
     }
 
     // 中心に近い順に、元の位置から最も近い「重ならない場所」へ置いていく
@@ -570,7 +587,7 @@
       return null;
     }
     // 周囲の単語の角を経由点にした最短経路
-    function aroundBoxes(e, ax, ay, bx, by, off = 4) {
+    function aroundBoxes(e, ax, ay, bx, by, off = 4, limit = 16) {
       const pad = 200;
       const l = Math.min(ax, bx) - pad, r = Math.max(ax, bx) + pad, t = Math.min(ay, by) - pad, btm = Math.max(ay, by) + pad;
       const obs = new Set();
@@ -581,7 +598,7 @@
         }
       const len = Math.hypot(bx - ax, by - ay) || 1;
       const distTo = (o) => Math.abs((bx - ax) * (ay - ys[o]) - (ax - xs[o]) * (by - ay)) / len;
-      const near = [...obs].sort((p, q) => distTo(p) - distTo(q)).slice(0, 24);
+      const near = [...obs].sort((p, q) => distTo(p) - distTo(q)).slice(0, limit);
       const inside = (x, y) => {
         let found = false;
         boxCells(e.i, x, y, (key) => {
@@ -667,7 +684,7 @@
       return r;
     }
     const sampleBezier = (a, c1, c2, b) => {
-      const n = Math.max(16, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 10));
+      const n = Math.max(12, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 18));
       const out = [];
       for (let i = 0; i <= n; i++) out.push(bezier(a, c1, c2, b, i / n));
       return out;
@@ -677,17 +694,17 @@
       const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
       const ux = (B[0] - A[0]) / len, uy = (B[1] - A[1]) / len, nx = -uy, ny = ux;
       const at = (f, d) => [A[0] + ux * len * f + nx * d, A[1] + uy * len * f + ny * d];
-      for (const k of [0.1, 0.15, 0.22, 0.3, 0.4, 0.5, 0.62, 0.75, 0.9, 1.1]) {
+      for (const k of [0.12, 0.2, 0.3, 0.42, 0.56, 0.75, 1]) {
         const d = Math.max(24, k * len);
         for (const sg of [1, -1]) {
           // 対称な弧と、片側に寄った弧
-          for (const [f1, f2, r1, r2] of [[1 / 3, 2 / 3, 1, 1], [0.2, 0.55, 1, 1], [0.45, 0.8, 1, 1], [0.25, 0.75, 1, 0.4], [0.25, 0.75, 0.4, 1]]) {
+          for (const [f1, f2, r1, r2] of [[1 / 3, 2 / 3, 1, 1], [0.25, 0.75, 1, 0.4], [0.25, 0.75, 0.4, 1]]) {
             yield sampleBezier(A, at(f1, d * sg * r1), at(f2, d * sg * r2), B);
           }
         }
       }
       // ゆるやかな S 字
-      for (const k of [0.15, 0.25, 0.35, 0.5]) {
+      for (const k of [0.2, 0.35]) {
         const d = Math.max(24, k * len);
         for (const sg of [1, -1]) yield sampleBezier(A, at(1 / 3, d * sg), at(2 / 3, -d * sg), B);
       }
@@ -717,7 +734,14 @@
           if (r >= GENTLE) return best;
         }
       }
-      return best || poly;
+      if (best) return best;
+      // 見つからない時だけ、周りの単語をより多く考慮して探し直す
+      const wide = aroundBoxes(e, A[0], A[1], B[0], B[1], 4, 48);
+      if (wide) {
+        const p = [A, ...wide, B];
+        for (const c of [spline(p), rounded(p, 40), rounded(p, 20), p]) if (pathClear(c, e)) return c;
+      }
+      return poly;
     }
 
     const bm = new Map();
