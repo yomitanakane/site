@@ -177,6 +177,13 @@
     for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
     return h >>> 0;
   }
+  // 単語同士の最低限の余白（左右・上下それぞれ片側ぶん）
+  const SPACE_X = 30, SPACE_Y = 24;
+  // 線をよけるために単語をずらす最大距離（これ以上遠くへは動かさない）
+  const MOVE_MAX = 300;
+  // 配置の計算方法を変えたら上げる（保存済みの配置を使わなくなる）
+  const LAYOUT_VERSION = 'v2';
+  const LAYOUT_CACHE = 'words-layout';
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
 
   async function buildMap() {
@@ -198,8 +205,30 @@
       ]);
     }
     for (const n of nodes) { n.bw = n.el.offsetWidth; n.bh = n.el.offsetHeight; }
-    layout();
-    buildEdges();
+    // 単語・タグ・枠の大きさが前回と同じなら、保存しておいた配置と線をそのまま使う
+    const sig = String(hashStr(LAYOUT_VERSION + JSON.stringify(nodes.map((n) => [n.w.id, n.w.word, n.bw, n.bh])) +
+      JSON.stringify([...linkGroups].map(([t, g]) => [t, g.map((w) => w.id)]))));
+    let cached = null;
+    try {
+      const c = JSON.parse(localStorage.getItem(LAYOUT_CACHE) || 'null');
+      if (c && c.sig === sig && c.pos.length === nodes.length) cached = c;
+    } catch (e) { /* 保存領域が使えない場合は毎回計算する */ }
+    if (cached) {
+      nodes.forEach((n, i) => { n.x = cached.pos[i][0]; n.y = cached.pos[i][1]; });
+      buckets = cached.buckets;
+    } else {
+      layout();
+      buildEdges(() => {
+        const r = (v) => Math.round(v * 10) / 10;
+        try {
+          localStorage.setItem(LAYOUT_CACHE, JSON.stringify({
+            sig,
+            pos: nodes.map((n) => [r(n.x), r(n.y)]),
+            buckets: buckets.map((b) => ({ alpha: b.alpha, lines: b.lines.map((l) => l.map(r)) })),
+          }));
+        } catch (e) { /* 容量不足などは無視 */ }
+      });
+    }
     for (const n of nodes) {
       n.el.style.transform = `translate(${Math.round(n.x - n.bw / 2)}px, ${Math.round(n.y - n.bh / 2)}px)`;
     }
@@ -229,7 +258,7 @@
     // 半幅・半高（枠同士の最低限の余白を含む）
     const hw = new Float64Array(n), hh = new Float64Array(n);
     let area = 0;
-    nodes.forEach((d, i) => { hw[i] = d.bw / 2 + 18; hh[i] = d.bh / 2 + 15; area += (hw[i] * 2 + 40) * (hh[i] * 2 + 40); });
+    nodes.forEach((d, i) => { hw[i] = d.bw / 2 + SPACE_X; hh[i] = d.bh / 2 + SPACE_Y; area += (hw[i] * 2 + 40) * (hh[i] * 2 + 40); });
     const R = Math.sqrt(area / Math.PI) * 1.2;
     const disc = (r) => { const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r; return [Math.cos(a) * d, Math.sin(a) * d]; };
     const centers = groups.map(() => disc(R));
@@ -376,14 +405,14 @@
    * 2. それでも線に掛かる単語は、近くの空いている場所へずらす
    * 3. ずらせなかった所は、線を1回折り曲げて単語を避ける
    */
-  function buildEdges() {
+  function buildEdges(onDone) {
     const n = nodes.length;
     buckets = [];
     if (!n) return;
     const t0 = performance.now();
     const alphaFor = alphaScale();
     const xs = nodes.map((d) => d.x), ys = nodes.map((d) => d.y);
-    const HW = nodes.map((d) => d.bw / 2 + 18), HH = nodes.map((d) => d.bh / 2 + 15); // 単語同士の間隔
+    const HW = nodes.map((d) => d.bw / 2 + SPACE_X), HH = nodes.map((d) => d.bh / 2 + SPACE_Y); // 単語同士の間隔
     const LW = nodes.map((d) => d.bw / 2 + 6), LH = nodes.map((d) => d.bh / 2 + 6); // 線との間隔
     const boxG = new Map(), segG = new Map();
     const put = (g, key, v) => { let s = g.get(key); if (!s) g.set(key, (s = new Set())); s.add(v); };
@@ -396,14 +425,17 @@
     }
     const hitBox = (b, x1, y1, x2, y2) => segHitsRect(x1, y1, x2, y2, xs[b] - LW[b], ys[b] - LH[b], xs[b] + LW[b], ys[b] + LH[b]);
     // 線分 (端点 i, j) に掛かる単語の数（limit で打ち切り）
+    // 同じ単語を二度調べないための印（呼び出しごとに番号を変える）
+    const seenMark = new Uint32Array(n);
+    let mark = 0;
     function hits(x1, y1, x2, y2, i, j, limit) {
       let c = 0;
-      const seen = new Set();
+      const m = ++mark;
       walkCells(x1, y1, x2, y2, (key) => {
         const s = boxG.get(key);
         if (s) for (const b of s) {
-          if (b === i || b === j || seen.has(b)) continue;
-          seen.add(b);
+          if (b === i || b === j || seenMark[b] === m) continue;
+          seenMark[b] = m;
           if (hitBox(b, x1, y1, x2, y2) && ++c >= limit) return false;
         }
       });
@@ -507,7 +539,7 @@
         inc[b].forEach(dropSeg);
         const tx = xs[b], ty = ys[b];
         const a0 = (b * 2.399) % (Math.PI * 2);
-        search: for (let r = 10; r < 2500; r += 10 + r * 0.06) {
+        search: for (let r = 10; r < MOVE_MAX; r += 10 + r * 0.06) {
           const k = Math.min(40, Math.max(8, Math.ceil((2 * Math.PI * r) / 14)));
           for (let s = 0; s < k; s++) {
             const a = a0 + (s / k) * Math.PI * 2;
@@ -549,7 +581,7 @@
         }
       const len = Math.hypot(bx - ax, by - ay) || 1;
       const distTo = (o) => Math.abs((bx - ax) * (ay - ys[o]) - (ax - xs[o]) * (by - ay)) / len;
-      const near = [...obs].sort((p, q) => distTo(p) - distTo(q)).slice(0, 36);
+      const near = [...obs].sort((p, q) => distTo(p) - distTo(q)).slice(0, 24);
       const inside = (x, y) => {
         let found = false;
         boxCells(e.i, x, y, (key) => {
@@ -581,11 +613,7 @@
       for (let v = prev[1]; v > 0; v = prev[v]) path.unshift(pts[v]);
       return path;
     }
-    for (const e of edges) {
-      const ax = xs[e.i], ay = ys[e.i], bx = xs[e.j], by = ys[e.j];
-      if (clear(ax, ay, bx, by, e)) continue;
-      e.via = oneBend(e, ax, ay, bx, by) || (performance.now() - t0 < 3000 ? aroundBoxes(e, ax, ay, bx, by) : null);
-    }
+    for (const e of edges) e.blocked = !clear(xs[e.i], ys[e.i], xs[e.j], ys[e.j], e);
 
     // 点列が単語に掛からないか
     const pathClear = (pts, e) => {
@@ -666,40 +694,60 @@
     }
     const GENTLE = 40; // これより急なカーブは使わない（px）
 
+    // 単語に掛かる線の道筋を決める
+    function route(e) {
+      const A = [xs[e.i], ys[e.i]], B = [xs[e.j], ys[e.j]];
+      // まずはゆるやかな弧で単語を避ける
+      for (const c of arcs(A, B)) if (minRadius(c) >= GENTLE && pathClear(c, e)) return c;
+      // 弧で避けられなければ経由点を通る曲線。なるべくゆるやかなものを選ぶ
+      // （単語の角から離れた経由点ほどゆるやかに曲げられるので、余白の大きい経路から順に試す）
+      let poly = null;
+      function* polys() {
+        for (const off of [40, 24]) { const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off); if (v) yield [A, ...v, B]; }
+        const v = oneBend(e, A[0], A[1], B[0], B[1]) || aroundBoxes(e, A[0], A[1], B[0], B[1]) || [];
+        poly = [A, ...v, B];
+        yield poly;
+      }
+      let best = null, bestR = -1;
+      for (const p of polys()) {
+        for (const c of [spline(p), rounded(p, 120), rounded(p, 80), rounded(p, 40)]) {
+          if (!pathClear(c, e)) continue;
+          const r = minRadius(c);
+          if (r > bestR) { bestR = r; best = c; }
+          if (r >= GENTLE) return best;
+        }
+      }
+      return best || poly;
+    }
+
     const bm = new Map();
     for (const e of edges) {
-      const a = Math.round(e.a * 100) / 100;
-      if (!bm.has(a)) bm.set(a, []);
-      const A = [xs[e.i], ys[e.i]], B = [xs[e.j], ys[e.j]];
-      let pts = [A, B];
-      if (e.via) {
-        let best = null;
-        // まずはゆるやかな弧で単語を避ける
-        if (performance.now() - t0 < 4000) {
-          for (const c of arcs(A, B)) if (minRadius(c) >= GENTLE && pathClear(c, e)) { best = c; break; }
-        }
-        // 弧で避けられなければ経由点を通る曲線。なるべくゆるやかなものを選ぶ
-        if (!best) {
-          const poly = [A, ...e.via, B];
-          let bestR = -1;
-          // 単語の角から離れた経由点ほど、ゆるやかに曲げられる
-          const polys = [poly];
-          if (performance.now() - t0 < 4500) for (const off of [48, 32, 20]) { const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off); if (v) polys.unshift([A, ...v, B]); }
-          search: for (const p of polys) {
-            for (const c of [spline(p), rounded(p, 120), rounded(p, 80), rounded(p, 40)]) {
-              if (!pathClear(c, e)) continue;
-              const r = minRadius(c);
-              if (r > bestR) { bestR = r; best = c; }
-              if (r >= GENTLE) break search;
-            }
-          }
-          if (!best) best = poly;
-        }
-        pts = best;
-      }
-      for (let k = 1; k < pts.length; k++) bm.get(a).push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
+      e.alpha = Math.round(e.a * 100) / 100;
+      if (!bm.has(e.alpha)) bm.set(e.alpha, []);
     }
     buckets = [...bm.entries()].sort((x, y) => x[0] - y[0]).map(([alpha, lines]) => ({ alpha, lines }));
+    const draw = (e, pts) => {
+      const L = bm.get(e.alpha);
+      for (let k = 1; k < pts.length; k++) L.push([pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1]]);
+    };
+    // 単語に掛からない線はすぐに描く
+    for (const e of edges) if (!e.blocked) draw(e, [[xs[e.i], ys[e.i]], [xs[e.j], ys[e.j]]]);
+    // 単語をよける線は、画面を止めないよう少しずつ計算して描き足す（今見えている所から）
+    const todo = edges.filter((e) => e.blocked);
+    let sorted = false;
+    const step = () => {
+      if (!sorted) {
+        const d = (e) => Math.hypot((xs[e.i] + xs[e.j]) / 2 - cam.x, (ys[e.i] + ys[e.j]) / 2 - cam.y);
+        todo.sort((p, q) => d(q) - d(p));
+        sorted = true;
+      }
+      const until = performance.now() + 12;
+      while (todo.length && performance.now() < until) { const e = todo.pop(); draw(e, route(e)); }
+      render();
+      if (todo.length) setTimeout(step, 0);
+      else if (onDone) onDone();
+    };
+    setTimeout(step, 0);
   }
 
   function drawLines() {
