@@ -673,7 +673,7 @@
     row(chip('ex-word', '言葉'), '押すと言葉の詳細な情報が表示されます。');
     row(chip('ex-tag', 'タグ'), 'マップ上の結びつきが分かりやすくなります。');
     row(chip('ex-btn', 'WARP'), 'ランダムな地点に移動します。');
-    row(chip('ex-btn', 'LIST'), '単語が一覧表示されます。ソートや絞り込みも可能');
+    row(chip('ex-btn', 'LIST'), '単語が一覧表示されます。ソートや絞り込みも可');
     const note = el('p', 'note', '性質上間違った情報が書き込まれている可能性もあるため、鵜呑みにしすぎず、ファクトチェックは適宜行ってください。そしてコッソリ教えてください。');
     box.append(lead, guide, note);
     body.append(head, box);
