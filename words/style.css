@@ -181,7 +181,7 @@ select.on { background: #000; color: #fff; }
   padding: var(--top) 40px 40px;
   -webkit-overflow-scrolling: touch;
 }
-.panel .gsearch { position: absolute; left: -1px; top: -1px; height: 31px; font-size: 12px; padding: 0 12px; z-index: 1; }
+.panel .gsearch { position: absolute; right: 29px; top: -1px; height: 31px; font-size: 12px; padding: 0 12px; z-index: 1; }
 .panel .close { position: absolute; right: -1px; top: -1px; width: 31px; height: 31px; padding: 0; font-size: 18px; line-height: 1; z-index: 1; }
 .body { text-align: left; display: flex; flex-direction: column; align-items: stretch; gap: 18px; }
 .d-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
