@@ -60,7 +60,7 @@ a { color: inherit; }
 
 .ui { position: fixed; z-index: 10; }
 #search { left: 16px; top: 16px; width: 240px; max-width: calc(100vw - 270px); }
-#q { width: 100%; padding: 6px 10px; letter-spacing: .08em; }
+#q { width: 100%; height: 34px; padding: 0 10px; letter-spacing: .08em; }
 #q::placeholder { color: #000; opacity: 1; }
 #q:focus::placeholder { color: #aaa; }
 #cands { border: 1px solid #000; border-top: 0; background: #fff; }
@@ -75,6 +75,7 @@ a { color: inherit; }
 #cands:hover .cand.on:not(:hover) { background: #fff; color: #000; }
 #cands:hover .cand.on:not(:hover) small { color: #888; }
 #topright { right: 16px; top: 16px; display: flex; gap: 8px; }
+#topright button { height: 34px; padding: 0 12px; }
 #credit {
   right: 12px; bottom: 10px;
   font-size: 10px; letter-spacing: .1em;
@@ -216,21 +217,27 @@ select.on { background: #000; color: #fff; }
 .d-rel .rw:hover { background: #f0f0f0; color: #000; }
 .panel .scroll { transition: opacity .15s; }
 /* ---------- ABOUT ---------- */
-.about { --fs: 16px; font-size: var(--fs); line-height: 1.9; }
+/* --fs: 文字の大きさ / --lh: 行の高さ（倍率）/ --ch: 飾りの高さ */
+.about { --fs: 16px; --lh: 2.1; --ch: 26px; font-size: var(--fs); line-height: var(--lh); }
 .about p { margin: 0; }
 .about a { text-decoration: underline; text-underline-offset: 3px; }
-.about ul { list-style: none; margin: 14px 0; padding: 0; }
-.about .note { font-size: 13px; line-height: 1.8; color: #333; }
+/* 飾り（同じ幅）と説明（左揃え）の2列。間は1文字分、行の間隔は均等 */
+.about .guide {
+  display: grid; grid-template-columns: max-content 1fr;
+  column-gap: 1em; row-gap: 10px; margin: 20px 0; align-items: start;
+}
+.about .note { font-size: 13px; line-height: 1.9; color: #333; }
 /*
- * 画面上の部品を模した飾り（押せない）。文字の大きさに合わせ、3種とも同じ高さ。
- * Noto Sans JP の文字の中心はベースラインから約 0.37em 上（実測）にあるので、
- * 枠の中の文字・枠そのものの中心を、周りの文字の中心にそろえる。
+ * 画面上の部品を模した飾り（押せない）。4つとも同じ高さ・同じ幅。
+ * 説明の1行目の文字の中心に、飾りの中心を合わせる
+ * （Noto Sans JP の文字の中心は行の中央より少し下にある。実測で調整）。
  */
 .about .ex {
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 26px; padding: 0 9px 0.03em; margin: 0 3px;
+  display: flex; align-items: center; justify-content: center;
+  height: var(--ch); padding: 0 9px 0.03em;
+  margin-top: calc((var(--lh) * var(--fs) - var(--ch)) / 2 + 0.04 * var(--fs));
   border: 1px solid #000; background: #fff; color: #000;
-  vertical-align: calc((var(--fs) - 1em) * 0.37 - 0.4px); line-height: 1;
+  line-height: 1;
   cursor: default; user-select: none; -webkit-user-select: none;
 }
 .about .ex-word { font-size: 15px; }
@@ -245,9 +252,9 @@ select.on { background: #000; color: #fff; }
 }
 
 @media (max-width: 600px) {
-  .about { --fs: 15px; }
+  .about { --fs: 15px; --ch: 24px; }
   .about .note { font-size: 12px; }
-  .about .ex { height: 24px; padding: 0 7px 0.03em; }
+  .about .ex { padding: 0 7px 0.03em; }
   .about .ex-word { font-size: 14px; }
   .about .ex-tag, .about .ex-btn { font-size: 11px; }
   .panel { --top: 22px; }

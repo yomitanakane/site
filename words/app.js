@@ -667,15 +667,15 @@
     const a = el('a', null, '読谷あかね');
     a.href = 'https://yomitanakane.com/'; a.target = '_blank'; a.rel = 'noopener';
     lead.append(a, 'が蒐集した言葉を雑多に眺めることを目的にしたサイトです。');
-    const ul = el('ul');
-    const li = (...parts) => { const e = el('li'); e.append(...parts); ul.append(e); };
-    li(chip('ex-word', '言葉'), 'をクリックすると詳細情報が表示されます。');
-    li('共通するタグにより紐づいた別の言葉が下部に表示されます。');
-    li(chip('ex-tag', 'タグ'), 'を押すとマップ上の結びつきが分かりやすくなります。');
-    li(chip('ex-btn', 'WARP'), 'ボタンでランダムな地点に移動します。');
-    li(chip('ex-btn', 'LIST'), '画面では単語が一覧表示されます。ソートや絞り込みも可能です。');
+    // 飾りと説明を2列に並べる（飾りは同じ幅、説明は左揃え）
+    const guide = el('div', 'guide');
+    const row = (c, text) => guide.append(c, el('span', 'g-text', text));
+    row(chip('ex-word', '言葉'), '押すと言葉の詳細な情報が表示されます。');
+    row(chip('ex-tag', 'タグ'), 'マップ上の結びつきが分かりやすくなります。');
+    row(chip('ex-btn', 'WARP'), 'ランダムな地点に移動します。');
+    row(chip('ex-btn', 'LIST'), '単語が一覧表示されます。ソートや絞り込みも可能');
     const note = el('p', 'note', '性質上間違った情報が書き込まれている可能性もあるため、鵜呑みにしすぎず、ファクトチェックは適宜行ってください。そしてコッソリ教えてください。');
-    box.append(lead, ul, note);
+    box.append(lead, guide, note);
     body.append(head, box);
   }
   $('#about').addEventListener('click', (e) => {
