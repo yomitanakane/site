@@ -182,7 +182,7 @@
   // 線をよけるために単語をずらす最大距離（これ以上遠くへは動かさない）
   const MOVE_MAX = 300;
   // 配置の計算方法を変えたら上げる（保存済みの配置を使わなくなる）
-  const LAYOUT_VERSION = 'v2';
+  const LAYOUT_VERSION = 'v3';
   const LAYOUT_CACHE = 'words-layout';
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
 
@@ -358,7 +358,7 @@
    * 線の濃さ：今あるタグのうち一番単語の少ないタグを最大 A_MAX、一番多いタグを最小 A_MIN とし、
    * その間を単語数（対数）の割合でグラデーションにする。GAMMA が大きいほど濃淡の差がはっきりする。
    */
-  const A_MAX = 0.4, A_MIN = 0.04, GAMMA = 2;
+  const A_MAX = 0.4, A_MIN = 0.07, GAMMA = 2;
   function alphaScale() {
     const sizes = [...linkGroups.values()].map((g) => g.length).filter((m) => m > 1);
     const lo = Math.log(Math.min(...sizes, 2)), hi = Math.log(Math.max(...sizes, 2));
@@ -1264,5 +1264,15 @@
       buildListControls();
       route();
       await buildMap();
-    });
+    })
+    .catch((e) => console.error(e))
+    .finally(hideLoading);
+
+  // 読み込み中の画面（白地にアイコン）を短いフェードで消す
+  function hideLoading() {
+    const l = document.getElementById('loading');
+    if (!l) return;
+    l.classList.add('done');
+    setTimeout(() => l.remove(), 400);
+  }
 })();
