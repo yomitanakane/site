@@ -24,14 +24,12 @@ button:hover { background: #000; color: #fff; }
 a { color: inherit; }
 [hidden] { display: none !important; }
 
-/* 読み込み中：白地の中央にアイコン。準備ができたら短いフェードで消える */
+/* 読み込み中は白地で覆い、準備ができたら短いフェードで消える */
 #loading {
   position: fixed; inset: 0; z-index: 100;
   background: #fff;
-  display: flex; align-items: center; justify-content: center;
   transition: opacity .3s ease-out;
 }
-#loading img { width: 72px; height: 72px; }
 #loading.done { opacity: 0; pointer-events: none; }
 
 /* ---------- MAP ---------- */
