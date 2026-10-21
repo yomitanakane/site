@@ -203,8 +203,9 @@ select.on { background: #000; color: #fff; }
   max-height: calc(5 * 37px); overflow-y: auto; overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
-.d-tagrow .tag { cursor: pointer; }
-.d-tagrow .tag:hover { background: #000; border-color: #000; color: #fff; }
+/* 結ぶ相手のいるタグだけ押せる */
+.d-tagrow button.tag { cursor: pointer; }
+.d-tagrow button.tag:hover { background: #000; border-color: #000; color: #fff; }
 /* 説明文との区切り線。説明文〜線の間隔を、枠の上端〜単語名の間隔と同じにする（18px は .body の gap） */
 .body > .d-tags { margin-top: calc(var(--strip) + var(--top) - 18px); border-top: 1px solid #000; padding-top: 20px; }
 .d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
