@@ -1268,7 +1268,7 @@
     .catch((e) => console.error(e))
     .finally(hideLoading);
 
-  // 読み込み中の画面（白地にアイコン）を短いフェードで消す
+  // 読み込み中の白地を短いフェードで消す
   function hideLoading() {
     const l = document.getElementById('loading');
     if (!l) return;
