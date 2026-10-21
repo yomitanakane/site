@@ -440,5 +440,6 @@
 {"id":"mvhnalth2qqk","word":"菜飯","reading":"なめし","variants":[],"meaning":"刻んだ青菜を混ぜて炊き込んだご飯のこと。","links":"","tags":["青菜","米","料理"],"mora":3,"created":"2026-10-21T05:01:53.525Z","updated":"2026-10-21T05:01:53.525Z"},
 {"id":"mvhnfvkoeuyt","word":"ビューフォート風力階級","reading":"びゅーふぉーとふうりょくかいきゅう","variants":["Beaufort scale"],"meaning":"フランシス・ボーフォートが1805年に考案した、風力を0-12の13段階に分類した指標。\n静穏→至軽風→軽風→軟風→和風→疾風→雄風→強風→疾強風→大強風→全強風→暴風→颶風","links":"","tags":["風","名数13","分類","1805年","フランシス・ボーフォート"],"mora":13,"created":"2026-10-21T05:05:59.448Z","updated":"2026-10-21T05:05:59.448Z"},
 {"id":"mvhnhhqab3c6","word":"颶風","reading":"ぐふう","variants":[],"meaning":"強く激しい風。ビューフォート風力階級におけるもっとも強い風。","links":"","tags":["ビューフォート風力階級","風","漢検一級配当"],"mora":3,"created":"2026-10-21T05:07:14.818Z","updated":"2026-10-21T05:07:14.818Z"},
-{"id":"mvhnicffv86h","word":"ラ岬","reading":"らみさき","variants":["Pointe du Raz"],"meaning":"フランス・ブルターニュ西端から大西洋に突き出た岬。","links":"","tags":["岬","フランス"],"mora":4,"created":"2026-10-21T05:07:54.603Z","updated":"2026-10-21T05:07:54.603Z"}
+{"id":"mvhnicffv86h","word":"ラ岬","reading":"らみさき","variants":["Pointe du Raz"],"meaning":"フランス・ブルターニュ西端から大西洋に突き出た岬。","links":"","tags":["岬","フランス"],"mora":4,"created":"2026-10-21T05:07:54.603Z","updated":"2026-10-21T05:07:54.603Z"},
+{"id":"mvhnj4s424pu","word":"ハムラ法","reading":"はむらほう","variants":[],"meaning":"目の下のたるみ・クマを改善する手術の方式。\nアメリカの整形美容外科医Hamraが紹介したことに由来。","links":"","tags":["美容","手術"],"mora":5,"created":"2026-10-21T05:08:31.348Z","updated":"2026-10-21T05:08:31.348Z"}
 ]
