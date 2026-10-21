@@ -40,7 +40,7 @@
     </div>
     <div id="detail" hidden>
       <div class="backdrop"></div>
-      <div class="wrap"><div class="panel"><button class="gsearch">このワードで検索</button><div class="scroll"><div class="body"></div></div></div></div>
+      <div class="wrap"><div class="panel"><button class="gsearch">このワードでGoogle検索</button><button class="close" aria-label="閉じる">×</button><div class="scroll"><div class="body"></div></div></div></div>
     </div>
     <div id="ghost" hidden></div>`;
 
@@ -1116,6 +1116,7 @@
     busy = false;
   }
 
+  $('.close', panel).addEventListener('click', () => closeDetail());
   $('.gsearch', panel).addEventListener('click', () => {
     if (cur) window.open('https://www.google.com/search?q=' + encodeURIComponent(cur.w.word), '_blank', 'noopener');
   });
