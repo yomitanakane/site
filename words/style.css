@@ -216,19 +216,21 @@ select.on { background: #000; color: #fff; }
 .d-rel .rw:hover { background: #f0f0f0; color: #000; }
 .panel .scroll { transition: opacity .15s; }
 /* ---------- ABOUT ---------- */
-.about { font-size: 16px; line-height: 1.9; }
+.about { --fs: 16px; font-size: var(--fs); line-height: 1.9; }
 .about p { margin: 0; }
 .about a { text-decoration: underline; text-underline-offset: 3px; }
 .about ul { list-style: none; margin: 14px 0; padding: 0; }
-/* 「・」の後で折り返した行は、文頭の位置にそろえる */
-.about li { padding-left: 1em; text-indent: -1em; }
-.about li::before { content: "・"; }
-/* 画面上の部品を模した飾り（押せない）。文字の大きさに合わせ、3種とも同じ高さ */
+.about .note { font-size: 13px; line-height: 1.8; color: #333; }
+/*
+ * 画面上の部品を模した飾り（押せない）。文字の大きさに合わせ、3種とも同じ高さ。
+ * Noto Sans JP の文字の中心はベースラインから約 0.37em 上（実測）にあるので、
+ * 枠の中の文字・枠そのものの中心を、周りの文字の中心にそろえる。
+ */
 .about .ex {
   display: inline-flex; align-items: center; justify-content: center;
-  height: 26px; padding: 0 9px; margin: 0 3px;
+  height: 26px; padding: 0 9px 0.03em; margin: 0 3px;
   border: 1px solid #000; background: #fff; color: #000;
-  vertical-align: middle; line-height: 1; text-indent: 0;
+  vertical-align: calc((var(--fs) - 1em) * 0.37 - 0.4px); line-height: 1;
   cursor: default; user-select: none; -webkit-user-select: none;
 }
 .about .ex-word { font-size: 15px; }
@@ -243,8 +245,9 @@ select.on { background: #000; color: #fff; }
 }
 
 @media (max-width: 600px) {
-  .about { font-size: 15px; }
-  .about .ex { height: 24px; padding: 0 7px; }
+  .about { --fs: 15px; }
+  .about .note { font-size: 12px; }
+  .about .ex { height: 24px; padding: 0 7px 0.03em; }
   .about .ex-word { font-size: 14px; }
   .about .ex-tag, .about .ex-btn { font-size: 11px; }
   .panel { --top: 22px; }
