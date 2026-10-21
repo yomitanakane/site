@@ -1016,17 +1016,19 @@
     const entries = w.tags.map((tag) => ({ tag, list: membersOf(tag).filter((o) => o !== w) }));
     if (w.selfTag && !w.tags.includes(w.selfTag)) entries.push({ tag: w.selfTag, list: membersOf(w.selfTag).filter((o) => o !== w) });
     entries.sort((a, b) => a.list.length - b.list.length);
-    if (entries.length) {
+    // 紐づく単語がまったく同じタグ（リンクのないタグ同士も含む）は1行に並べ、単語は一度だけ出す
+    const groups = new Map();
+    for (const { tag, list } of entries) {
+      const key = list.map((o) => o.id).join('\u0001');
+      if (!groups.has(key)) groups.set(key, { tags: [], list });
+      groups.get(key).tags.push(tag);
+    }
+    if (groups.size) {
       const box = el('div', 'd-tags');
-      let row = null;
-      for (const { tag, list } of entries) {
-        // リンクのないタグは1行にまとめて並べる
-        if (!row || list.length || row.dataset.lone !== '1') {
-          row = el('div', 'd-tagrow');
-          row.dataset.lone = list.length ? '0' : '1';
-          box.append(row);
-        }
-        row.append(el('span', 'tag', tag));
+      for (const { tags, list } of groups.values()) {
+        const row = el('div', 'd-tagrow');
+        for (const tag of tags) row.append(el('span', 'tag', tag));
+        box.append(row);
         if (!list.length) continue;
         const ws = el('div', 'd-rel');
         for (const o of list) {
@@ -1038,7 +1040,6 @@
           ws.append(b);
         }
         box.append(ws);
-        row = null;
       }
       body.append(box);
     }
@@ -1058,7 +1059,11 @@
       ghost.hidden = false;
       const to = b ? rectKF(b) : { ...rectKF(a), opacity: 0 };
       const anim = ghost.animate([rectKF(a), to], { duration: dur, easing: 'cubic-bezier(.25,.8,.25,1)', fill: 'forwards' });
-      anim.onfinish = () => { ghost.hidden = true; anim.cancel(); resolve(); };
+      let done = false;
+      const finish = () => { if (done) return; done = true; ghost.hidden = true; anim.cancel(); resolve(); };
+      anim.onfinish = finish;
+      // 画面が裏に回っているなどでアニメーションが進まなくても、操作できない状態にならないように
+      setTimeout(finish, dur + 200);
     });
   }
   const visibleRect = (e) => {
