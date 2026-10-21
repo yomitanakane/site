@@ -325,7 +325,8 @@
   }
 
   // 登録数の少ないタグほど濃く
-  const alphaFor = (m) => Math.max(0.05, 0.4 / (1 + 1.3 * Math.log2(m / 2)));
+  // 少ない単語のタグほど濃く、多いタグほど急に薄く（2語: 0.6 → 4語: 0.26 → 10語: 0.09）
+  const alphaFor = (m) => Math.max(0.04, 0.6 * Math.pow(2 / m, 1.2));
 
   // 線分が長方形に掛かるか（Liang–Barsky）
   function segHitsRect(x1, y1, x2, y2, l, t, r, b) {
