@@ -325,8 +325,19 @@
   }
 
   // 登録数の少ないタグほど濃く
-  // 少ない単語のタグほど濃く、多いタグほど急に薄く（2語: 0.6 → 4語: 0.26 → 10語: 0.09）
-  const alphaFor = (m) => Math.max(0.04, 0.6 * Math.pow(2 / m, 1.2));
+  /*
+   * 線の濃さ：今あるタグのうち一番単語の少ないタグを最大 A_MAX、一番多いタグを最小 A_MIN とし、
+   * その間を単語数（対数）の割合でグラデーションにする。GAMMA が大きいほど濃淡の差がはっきりする。
+   */
+  const A_MAX = 0.4, A_MIN = 0.04, GAMMA = 2;
+  function alphaScale() {
+    const sizes = [...linkGroups.values()].map((g) => g.length).filter((m) => m > 1);
+    const lo = Math.log(Math.min(...sizes, 2)), hi = Math.log(Math.max(...sizes, 2));
+    return (m) => {
+      const t = hi > lo ? (Math.log(m) - lo) / (hi - lo) : 0;
+      return A_MIN + (A_MAX - A_MIN) * Math.pow(1 - t, GAMMA);
+    };
+  }
 
   // 線分が長方形に掛かるか（Liang–Barsky）
   function segHitsRect(x1, y1, x2, y2, l, t, r, b) {
@@ -370,6 +381,7 @@
     buckets = [];
     if (!n) return;
     const t0 = performance.now();
+    const alphaFor = alphaScale();
     const xs = nodes.map((d) => d.x), ys = nodes.map((d) => d.y);
     const HW = nodes.map((d) => d.bw / 2 + 18), HH = nodes.map((d) => d.bh / 2 + 15); // 単語同士の間隔
     const LW = nodes.map((d) => d.bw / 2 + 6), LH = nodes.map((d) => d.bh / 2 + 6); // 線との間隔
