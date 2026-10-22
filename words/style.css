@@ -190,7 +190,7 @@ select.on { background: #000; color: #fff; }
 .d-word { font-size: 44px; font-weight: 500; line-height: 1.2; letter-spacing: .1em; overflow-wrap: anywhere; }
 .d-read { font-size: 12px; color: #555; letter-spacing: .1em; }
 .d-var { font-size: 15px; color: #222; }
-.d-var span + span::before { content: "／"; color: #aaa; margin: 0 .5em; }
+.d-var span + span::before { content: "/"; color: #aaa; margin: 0 .5em; }
 .d-mean { font-size: 18px; line-height: 1.8; }
 .d-mean > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* 「>」で始まる行（引用）は薄いグレーの帯 */
@@ -198,22 +198,22 @@ select.on { background: #000; color: #fff; }
 .d-links { font-size: 11px; color: #555; line-height: 1.7; }
 .d-links > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* タグと、それに紐づく単語 */
-/* タグ部分は5行ほど（単語ボタン1行 ≒ 37px）まで表示し、残りはこの中だけでスクロール */
+/* タグ部分は5行ほど（単語ボタン1行 ≒ 31px）まで表示し、残りはこの中だけでスクロール */
 .d-tags-in {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
-  max-height: calc(5 * 37px); overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  max-height: calc(5 * 31px); overflow-y: auto; overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 /* 結ぶ相手のいるタグだけ押せる */
 .d-tagrow button.tag { cursor: pointer; }
 .d-tagrow button.tag:hover { background: #000; border-color: #000; color: #fff; }
-/* 説明文との区切り線。説明文〜線の間隔を、枠の上端〜単語名の間隔と同じにする（18px は .body の gap） */
-.body > .d-tags { margin-top: calc(var(--strip) + var(--top) - 18px); border-top: 1px solid #000; padding-top: 20px; }
+/* 説明文との区切り線（説明文〜線の間隔は .body の gap 18px ＋ 6px） */
+.body > .d-tags { margin-top: 6px; border-top: 1px solid #000; padding-top: 18px; }
 .d-tagrow { display: flex; flex-wrap: wrap; gap: 6px; }
 /* タグは黒地で小さめ、単語は白地の枠付きボタン */
 .d-tagrow .tag { font-size: 12px; padding: 3px 10px; border: 1px solid #444; background: #444; color: #fff; line-height: 1.4; letter-spacing: .04em; }
-.d-rel { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 6px; }
-.d-rel .rw { font-size: 15px; padding: 4px 12px; letter-spacing: 0; line-height: 1.4; text-align: left; }
+.d-rel { display: flex; flex-wrap: wrap; gap: 5px; padding-bottom: 2px; }
+.d-rel .rw { font-size: 13px; padding: 3px 10px; letter-spacing: 0; line-height: 1.4; text-align: left; }
 .d-rel .rw:hover { background: #f0f0f0; color: #000; }
 .panel .scroll { transition: opacity .15s; }
 /* ---------- ABOUT ---------- */
@@ -226,6 +226,7 @@ select.on { background: #000; color: #fff; }
   display: grid; grid-template-columns: max-content 1fr;
   column-gap: 1em; row-gap: 2px; margin: 20px 0; align-items: start;
 }
+.about .g-text { white-space: nowrap; min-width: 0; overflow: hidden; line-height: calc(var(--lh) * var(--fs)); }
 .about .note { font-size: 13px; line-height: 1.9; color: #333; }
 /*
  * 画面上の部品を模した飾り（押せない）。4つとも同じ高さ・同じ幅。
@@ -261,7 +262,8 @@ select.on { background: #000; color: #fff; }
   .panel .scroll { padding: var(--top) 20px 28px; }
   .d-word { font-size: 32px; }
   .d-mean { font-size: 16px; }
-  .d-var, .d-rel .rw { font-size: 14px; }
+  .d-var { font-size: 14px; }
+  .d-rel .rw { font-size: 12px; }
   .d-tagrow .tag { font-size: 11px; }
   .cell { min-height: 36px; padding: 5px 4px; font-size: 14px; }
   .cell.s-m { font-size: 11px; }

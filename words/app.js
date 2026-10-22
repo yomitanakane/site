@@ -29,7 +29,7 @@
         <div class="controls">
           <div class="group"><span class="lbl">SORT</span><div class="seg"><button data-sort="kana">あいう</button><button data-sort="mora">モーラ</button><button data-sort="link">タグリンク数</button></div></div>
           <div class="group"><span class="lbl">FILTER</span>
-            <label class="sel"><span>モーラ</span><select id="fMora"></select></label>
+            <div class="sel"><span>モーラ</span><button id="fMora" class="pick">—</button><div id="moraBox" class="kana" hidden></div></div>
             <div class="sel"><span>頭文字</span><button id="fInit" class="pick">—</button><div id="kana" class="kana" hidden></div></div>
             <button id="fTag" class="chip" hidden></button>
           </div>
@@ -608,6 +608,7 @@
     fill();
     gsearch.hidden = !state.w;
     detail.hidden = false;
+    fitGuide();
     scroller.scrollTop = 0;
     panel.style.visibility = 'hidden';
     const to = panel.getBoundingClientRect();
@@ -678,6 +679,16 @@
     box.append(lead, guide, note);
     body.append(head, box);
   }
+  function fitGuide() {
+    const texts = $$('.about .g-text', body);
+    if (!texts.length) return;
+    texts.forEach((t) => { t.style.fontSize = ''; });
+    const base = parseFloat(getComputedStyle(texts[0]).fontSize);
+    let k = 1;
+    for (const t of texts) if (t.scrollWidth > t.clientWidth) k = Math.min(k, t.clientWidth / t.scrollWidth);
+    if (k < 1) texts.forEach((t) => { t.style.fontSize = Math.max(8, Math.floor(base * k * 10) / 10) + 'px'; });
+  }
+  addEventListener('resize', () => { if (!detail.hidden) fitGuide(); });
   $('#about').addEventListener('click', (e) => {
     const b = e.currentTarget;
     openPanel(fillAbout, { w: null, src: b }, b.getBoundingClientRect());
@@ -686,7 +697,7 @@
   /* ================= LIST ================= */
 
   const listEl = $('#list'), grid = $('#grid');
-  const fMora = $('#fMora'), fInit = $('#fInit'), fTag = $('#fTag'), kanaBox = $('#kana');
+  const fMora = $('#fMora'), fInit = $('#fInit'), fTag = $('#fTag'), kanaBox = $('#kana'), moraBox = $('#moraBox');
   const state = { sort: 'kana', dir: 1, mora: null, initial: null, tag: null };
   const listCells = new Map();
   let fitTimer = 0;
@@ -697,21 +708,23 @@
   const SORT_LABEL = { kana: 'あいう', mora: 'モーラ', link: 'タグリンク数' };
 
   function buildListControls() {
-    const opt = (v, t) => { const o = el('option', null, t); o.value = v; return o; };
-    fMora.append(opt('', '—'));
-    [...new Set(words.map((w) => w.mora))].sort((a, b) => a - b).forEach((m) => fMora.append(opt(m, m)));
+    buildMora();
     buildKana();
-    fMora.addEventListener('change', () => { state.mora = fMora.value === '' ? null : Number(fMora.value); renderList(true); });
-    fInit.addEventListener('click', (e) => {
+    // モーラ・頭文字の選択欄を開く（片方だけ開く。画面からはみ出す場合は左へずらす）
+    const popup = (btn, box, other) => btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      kanaBox.hidden = !kanaBox.hidden;
-      if (kanaBox.hidden) return;
-      // 画面からはみ出す場合は左へずらす
-      kanaBox.style.left = '0px';
-      const over = kanaBox.getBoundingClientRect().right - (innerWidth - 8);
-      if (over > 0) kanaBox.style.left = -over + 'px';
+      other.hidden = true;
+      box.hidden = !box.hidden;
+      if (box.hidden) return;
+      box.style.left = '0px';
+      const over = box.getBoundingClientRect().right - (innerWidth - 8);
+      if (over > 0) box.style.left = -over + 'px';
     });
-    document.addEventListener('click', (e) => { if (!kanaBox.hidden && !kanaBox.contains(e.target)) kanaBox.hidden = true; });
+    popup(fMora, moraBox, kanaBox);
+    popup(fInit, kanaBox, moraBox);
+    document.addEventListener('click', (e) => {
+      for (const box of [kanaBox, moraBox]) if (!box.hidden && !box.contains(e.target)) box.hidden = true;
+    });
     fTag.addEventListener('click', () => { state.tag = null; renderList(true); });
     $$('[data-sort]', listEl).forEach((b) => b.addEventListener('click', () => {
       const s = b.dataset.sort;
@@ -734,10 +747,28 @@
         const b = el('button', null, c);
         b.dataset.c = c;
         b.disabled = !have.has(c);
-        b.addEventListener('click', () => pickInitial(c));
+        // 選択中の文字をもう一度押すと解除
+        b.addEventListener('click', () => pickInitial(state.initial === c ? null : c));
         kanaBox.append(b);
       }
     }
+  }
+  function buildMora() {
+    const clear = el('button', 'k-clear', '—');
+    clear.addEventListener('click', () => pickMora(null));
+    moraBox.append(clear);
+    for (const m of [...new Set(words.map((w) => w.mora))].sort((a, b) => a - b)) {
+      const b = el('button', null, String(m));
+      b.dataset.m = m;
+      // 選択中のモーラをもう一度押すと解除
+      b.addEventListener('click', () => pickMora(state.mora === m ? null : m));
+      moraBox.append(b);
+    }
+  }
+  function pickMora(m) {
+    state.mora = m;
+    moraBox.hidden = true;
+    renderList(true);
   }
   function pickInitial(c) {
     state.initial = c;
@@ -774,7 +805,8 @@
       b.classList.toggle('on', on);
       b.textContent = SORT_LABEL[b.dataset.sort] + (on ? (state.dir > 0 ? ' ▼' : ' ▲') : '');
     });
-    fMora.value = state.mora == null ? '' : String(state.mora);
+    fMora.textContent = state.mora == null ? '—' : String(state.mora);
+    $$('[data-m]', moraBox).forEach((b) => b.classList.toggle('on', Number(b.dataset.m) === state.mora));
     fInit.textContent = state.initial || '—';
     $$('[data-c]', kanaBox).forEach((b) => b.classList.toggle('on', b.dataset.c === state.initial));
     fMora.classList.toggle('on', state.mora != null);
