@@ -187,11 +187,11 @@ select.on { background: #000; color: #fff; }
 .body { text-align: left; display: flex; flex-direction: column; align-items: stretch; gap: 18px; }
 .d-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .d-head .d-read + .d-var { margin-top: -4px; }
-.d-word { font-size: 44px; font-weight: 500; line-height: 1.2; letter-spacing: .1em; overflow-wrap: anywhere; }
+.d-word { font-size: 39px; font-weight: 500; line-height: 1.2; letter-spacing: .1em; overflow-wrap: anywhere; }
 .d-read { font-size: 12px; color: #555; letter-spacing: .1em; }
 .d-var { font-size: 15px; color: #222; }
 .d-var span + span::before { content: "/"; color: #aaa; margin: 0 .5em; }
-.d-mean { font-size: 18px; line-height: 1.8; }
+.d-mean { font-size: 15px; line-height: 1.8; }
 .d-mean > div { white-space: pre-wrap; overflow-wrap: anywhere; }
 /* 「>」で始まる行（引用）は薄いグレーの帯 */
 .d-mean > .quote { background: #efefef; padding: 2px 12px; margin: 4px 0; }
@@ -260,8 +260,8 @@ select.on { background: #000; color: #fff; }
   .about .ex-tag, .about .ex-btn { font-size: 11px; }
   .panel { --top: 22px; }
   .panel .scroll { padding: var(--top) 20px 28px; }
-  .d-word { font-size: 32px; }
-  .d-mean { font-size: 16px; }
+  .d-word { font-size: 27px; }
+  .d-mean { font-size: 13px; }
   .d-var { font-size: 14px; }
   .d-rel .rw { font-size: 12px; }
   .d-tagrow .tag { font-size: 11px; }
