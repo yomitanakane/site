@@ -43,6 +43,13 @@
     return toHira(s).toLowerCase().replace(IGNORE, '');
   }
 
+  // タグを同じものとみなすためのキー。norm と同じく全角半角・大文字小文字・ひらがなカタカナ・括弧などの記号は無視するが、
+  // 長音「ー」（と「-」「〜」）は区別する（「ハト」と「ハート」は別のタグ）
+  const TAG_IGNORE = /[\s　・･_.,，．、。'"’‘”“「」『』()（）\[\]［］【】〈〉《》!！?？:：;；\/／\\＼&＆]/g;
+  function tagKey(s) {
+    return toHira(s).toLowerCase().replace(/[\-‐‑–—―－〜～~]/g, 'ー').replace(TAG_IGNORE, '');
+  }
+
   // 全角=1, 半角=0.5 で数えた見た目の長さ
   function visualLength(s) {
     let n = 0;
@@ -92,7 +99,7 @@
     return best;
   }
 
-  const Kana = { toHira, toReading, isKana, mora, initial, norm, visualLength, matchScore };
+  const Kana = { toHira, toReading, isKana, mora, initial, norm, tagKey, visualLength, matchScore };
   if (typeof module !== 'undefined' && module.exports) module.exports = Kana;
   else root.Kana = Kana;
 })(this);
