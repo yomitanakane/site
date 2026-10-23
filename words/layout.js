@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L2';
+  const VERSION = 'L3';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -108,8 +108,14 @@
    */
   const strength = (m) => (m <= 2 ? 1.5 : m <= 4 ? 1.1 : 1 / Math.max(1, m - 3));
 
-  // タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
-  function place(nodes, groups) {
+  // 単語そのものがタグ名になっている時、そのタグの単語を単語本体（中心の単語）へ引き寄せる強さ
+  const HUB_PULL = 0.5;
+
+  /*
+   * タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
+   * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
+   */
+  function place(nodes, groups, hubs) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
     if (!n) return { xs, ys };
@@ -158,6 +164,14 @@
         for (const i of g) {
           const ddx = cx - xs[i], ddy = cy - ys[i], d = Math.hypot(ddx, ddy);
           if (d > r) { const f = (k * (d - r)) / d; dx[i] += ddx * f; dy[i] += ddy * f; }
+        }
+        // 単語そのものがタグになっている場合は、そのタグの単語を単語本体のすぐ近くへ
+        for (const h of hubs[gi]) {
+          for (const i of g) {
+            if (i === h) continue;
+            const ddx = xs[h] - xs[i], ddy = ys[h] - ys[i];
+            dx[i] += ddx * HUB_PULL; dy[i] += ddy * HUB_PULL;
+          }
         }
       });
       // 混み合っている所から空いている所へ押し出す（密度の勾配）
@@ -214,8 +228,18 @@
       const c = placed.get(key);
       if (c) for (const j of c) if (Math.abs(x - xs[j]) < hw[i] + hw[j] && Math.abs(y - ys[j]) < hh[i] + hh[j]) return false;
     });
-    for (const i of order) {
-      const tx = xs[i], ty = ys[i];
+    // 単語そのものがタグになっている場合、そのタグの単語は、単語本体を置いた直後にそのすぐ周りへ置く
+    // （複数の単語本体に属する時は、単語の少ないタグの単語本体を優先）
+    const hubOf = new Int32Array(n).fill(-1), hubSize = new Float64Array(n).fill(Infinity);
+    groups.forEach((g, gi) => {
+      for (const h of hubs[gi]) for (const i of g) if (i !== h && g.length < hubSize[i]) { hubOf[i] = h; hubSize[i] = g.length; }
+    });
+    const members = Array.from({ length: n }, () => []);
+    for (let i = 0; i < n; i++) if (hubOf[i] >= 0) members[hubOf[i]].push(i);
+    const done = new Uint8Array(n);
+    function put(i, tx, ty) {
+      if (done[i]) return;
+      done[i] = 1;
       let px = tx, py = ty;
       if (!free(i, tx, ty)) {
         search: for (let r = 8; r < 20000; r += 8 + r * 0.04) {
@@ -230,6 +254,12 @@
       }
       xs[i] = px; ys[i] = py;
       cellsOf(i, px, py, (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
+      for (const j of members[i]) put(j, px, py);
+    }
+    for (const i of order) {
+      const h = hubOf[i];
+      if (h >= 0) put(h, xs[h], ys[h]); // 単語本体を先に置く（その周りに i も置かれる）
+      put(i, xs[i], ys[i]);
     }
     return { xs, ys };
   }
@@ -635,9 +665,11 @@
     const nodes = data.list.map((w) => ({ id: w.id, bw: boxWidth(w.word), bh: BOX_H }));
     const tags = [...data.groups.keys()];
     const groups = tags.map((t) => data.groups.get(t));
-    const linked = groups.filter((g) => g.length > 1);
-    const { xs, ys } = place(nodes, linked);
     const tagIndex = groups.map((g, i) => i).filter((i) => groups[i].length > 1);
+    const linked = tagIndex.map((i) => groups[i]);
+    // そのタグと同じ名前の単語
+    const hubs = tagIndex.map((i) => groups[i].filter((w) => data.list[w].selfTag === tags[i]));
+    const { xs, ys } = place(nodes, linked, hubs);
     const edges = connect(nodes, linked, xs, ys);
     const r1 = (v) => Math.round(v * 10) / 10;
     return {
