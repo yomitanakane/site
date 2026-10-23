@@ -33,6 +33,7 @@
             <div class="sel"><span>頭文字</span><button id="fInit" class="pick">—</button><div id="kana" class="kana" hidden></div></div>
             <button id="fTag" class="chip" hidden></button>
           </div>
+          <span id="count" class="count"></span>
         </div>
         <button id="return">RETURN</button>
       </div></div>
@@ -827,6 +828,8 @@
     }
     grid.textContent = '';
     grid.append(frag);
+    // 表示中（絞り込み後）の単語の数
+    $('#count').textContent = arr.length === 1 ? '1 word' : `${arr.length} words`;
     fitCells(grid);
     $$('[data-sort]', listEl).forEach((b) => {
       const on = b.dataset.sort === state.sort;

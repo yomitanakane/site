@@ -106,6 +106,8 @@ a { color: inherit; }
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border: 1px solid #000; padding: 4px 8px; }
 .lbl { font-size: 13px; letter-spacing: .08em; color: #000; }
+/* FILTER の右に表示中の単語の数 */
+.count { font-size: 13px; letter-spacing: .08em; color: #000; white-space: nowrap; padding: 0 4px; }
 .group button, select { height: 28px; padding: 0 10px; font-size: 13px; line-height: 1; }
 .group button.on { background: #000; color: #fff; }
 #return { height: 38px; padding: 0 14px; }
@@ -274,7 +276,7 @@ select.on { background: #000; color: #fff; }
   .bar-in { padding: 10px 12px; gap: 8px; }
   .controls { gap: 6px; }
   .group { padding: 3px 6px; gap: 6px; }
-  .lbl, .sel span { font-size: 12px; letter-spacing: 0; }
+  .lbl, .sel span, .count { font-size: 12px; letter-spacing: 0; }
   .sel span { padding-right: 4px; }
   .group button, select { height: 26px; font-size: 12px; padding: 0 7px; letter-spacing: 0; }
   select, .group .pick { min-width: 40px; }
