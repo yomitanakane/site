@@ -754,10 +754,12 @@
     /*
      * フィルタの上でホイールを回すと選択を前後に送る（上：数が小さい方・五十音で前、下：数が大きい方・後ろ）。
      * 先頭の手前は「—」（絞り込みなし）。マウスのホイールは1目盛りで1つ、タッチパッドは少しずつ溜めて1つ。
+     * 開いた選択欄（box）の上では切り替えず、選択欄をふつうにスクロールする。
      */
-    const wheelStep = (target, list, get, pick) => {
+    const wheelStep = (target, box, list, get, pick) => {
       let acc = 0;
       target.addEventListener('wheel', (e) => {
+        if (box.contains(e.target)) return;
         e.preventDefault();
         const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * innerHeight : e.deltaY;
         let d = 0;
@@ -770,8 +772,8 @@
       }, { passive: false });
     };
     const have = new Set(words.map((w) => w.ini));
-    wheelStep(fMora.parentNode, [null, ...[...new Set(words.map((w) => w.mora))].sort((a, b) => a - b)], () => state.mora, pickMora);
-    wheelStep(fInit.parentNode, [null, ...KANA_TABLE.join('').split('').filter((c) => have.has(c))], () => state.initial, pickInitial);
+    wheelStep(fMora.parentNode, moraBox, [null, ...[...new Set(words.map((w) => w.mora))].sort((a, b) => a - b)], () => state.mora, pickMora);
+    wheelStep(fInit.parentNode, kanaBox, [null, ...KANA_TABLE.join('').split('').filter((c) => have.has(c))], () => state.initial, pickInitial);
     document.addEventListener('click', (e) => {
       for (const box of [kanaBox, moraBox]) if (!box.hidden && !box.contains(e.target)) box.hidden = true;
     });
