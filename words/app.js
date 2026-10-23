@@ -573,6 +573,7 @@
     cur = { w: o, src: listCells.get(o.id) || null };
     gsearch.hidden = false;
     fillDetail(o);
+    fitTitle();
     scroller.scrollTop = 0;
     scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
   }
@@ -608,6 +609,7 @@
     fill();
     gsearch.hidden = !state.w;
     detail.hidden = false;
+    fitTitle();
     fitGuide();
     scroller.scrollTop = 0;
     panel.style.visibility = 'hidden';
@@ -688,7 +690,20 @@
     for (const t of texts) if (t.scrollWidth > t.clientWidth) k = Math.min(k, t.clientWidth / t.scrollWidth);
     if (k < 1) texts.forEach((t) => { t.style.fontSize = Math.max(8, Math.floor(base * k * 10) / 10) + 'px'; });
   }
-  addEventListener('resize', () => { if (!detail.hidden) fitGuide(); });
+  // 単語名が枠に収まらず折り返す時は、1行に収まるまで文字を小さくする（下限は CSS の --min。それでも収まらなければ折り返す）
+  function fitTitle() {
+    const t = $('.d-word', body);
+    if (!t) return;
+    t.style.fontSize = '';
+    const cs = getComputedStyle(t);
+    let size = parseFloat(cs.fontSize);
+    const min = parseFloat(cs.getPropertyValue('--min')) || size;
+    while (t.getBoundingClientRect().height > size * 1.2 * 1.5 && size > min) {
+      size = Math.max(min, size - 1);
+      t.style.fontSize = size + 'px';
+    }
+  }
+  addEventListener('resize', () => { if (!detail.hidden) { fitTitle(); fitGuide(); } });
   $('#about').addEventListener('click', (e) => {
     const b = e.currentTarget;
     openPanel(fillAbout, { w: null, src: b }, b.getBoundingClientRect());
