@@ -92,6 +92,8 @@ a { color: inherit; }
   position: fixed; inset: 0; z-index: 20;
   background: #fff;
   overflow-y: auto;
+  /* 絞り込みで縦スクロールバーが出たり消えたりしても、表示が横にずれないよう幅を常に確保する */
+  scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
   transition: opacity .18s;
 }
