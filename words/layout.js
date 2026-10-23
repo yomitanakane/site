@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L3';
+  const VERSION = 'L4';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -79,9 +79,13 @@
   }
   // .node の枠（左右 padding 10px・枠線 1px、高さ 32px）
   const BOX_H = 32;
+  // 単語名の「( )」「（ ）」とその中身は少し小さく表示する（app.js も同じ規則・倍率）
+  const PAREN = /[(（][^()（）]*[)）]/g;
+  const PAREN_SCALE = 0.75;
+  const textWidth = (s) => { let w = 0; for (const c of s) w += charWidth(c); return w; };
   function boxWidth(word) {
-    let w = 0;
-    for (const c of word) w += charWidth(c);
+    let w = textWidth(word);
+    for (const m of word.matchAll(PAREN)) w -= textWidth(m[0]) * (1 - PAREN_SCALE);
     return Math.ceil(w) + 22;
   }
 
@@ -684,7 +688,7 @@
     };
   }
 
-  const Layout = { VERSION, linkData, signature, boxWidth, BOX_H, compute };
+  const Layout = { VERSION, linkData, signature, boxWidth, BOX_H, PAREN, compute };
   if (typeof module !== 'undefined' && module.exports) module.exports = Layout;
   else root.Layout = Layout;
 })(this);

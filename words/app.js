@@ -111,9 +111,22 @@
     return [...heads.sort(kanaCmp), ...(tagMap.get(tag) || []).filter((w) => w.selfTag !== tag).sort(kanaCmp)];
   }
 
+  // 単語名を表示する要素（「( )」「（ ）」とその中身は少し小さく。大きさは CSS の .paren）
+  function wordEl(tag, cls, word) {
+    const e = el(tag, cls);
+    let last = 0;
+    for (const m of word.matchAll(Layout.PAREN)) {
+      if (m.index > last) e.append(word.slice(last, m.index));
+      e.append(el('span', 'paren', m[0]));
+      last = m.index + m[0].length;
+    }
+    if (last < word.length) e.append(word.slice(last));
+    return e;
+  }
+
   function cellFor(w, onClick) {
     const c = el('div', 'cell');
-    c.append(el('span', null, w.word));
+    c.append(wordEl('span', null, w.word));
     c.addEventListener('click', () => onClick(c));
     return c;
   }
@@ -170,7 +183,7 @@
     world.textContent = '';
     const frag = document.createDocumentFragment();
     nodes = words.map((w, i) => {
-      const e = el('div', 'node', w.word);
+      const e = wordEl('div', 'node', w.word);
       e.dataset.id = w.id;
       const [x, y] = L.pos[i];
       const bw = Layout.boxWidth(w.word), bh = Layout.BOX_H;
@@ -444,7 +457,7 @@
     cands.textContent = '';
     candList.forEach((w, i) => {
       const c = el('div', 'cand' + (i === candIdx ? ' on' : ''));
-      c.append(el('span', null, w.word));
+      c.append(wordEl('span', null, w.word));
       if (w.reading) c.append(el('small', null, w.reading));
       c.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(w); });
       cands.append(c);
@@ -497,7 +510,7 @@
   function fillDetail(w) {
     body.textContent = '';
     const head = el('div', 'd-head');
-    head.append(el('div', 'd-word', w.word));
+    head.append(wordEl('div', 'd-word', w.word));
     if (w.reading) head.append(el('div', 'd-read', w.reading));
     if (w.variants.length) {
       const v = el('div', 'd-var');
@@ -549,7 +562,7 @@
         if (!list.length) continue;
         const ws = el('div', 'd-rel');
         for (const o of list) {
-          const b = el('button', 'rw', o.word);
+          const b = wordEl('button', 'rw', o.word);
           b.addEventListener('click', () => {
             if (view === 'list') swapDetail(o);
             else closeDetail(() => goToWord(o, () => openFromNode(o)), true);

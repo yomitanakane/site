@@ -55,6 +55,8 @@ a { color: inherit; }
   cursor: pointer;
   transition: background-color .9s, color .9s;
 }
+/* 単語名の「( )」とその中身は少し小さく（layout.js の PAREN_SCALE と同じ倍率） */
+.paren { font-size: .75em; }
 .node:hover { background: #f2f2f2; }
 .node.flash { background: #000; color: #fff; transition: none; }
 
