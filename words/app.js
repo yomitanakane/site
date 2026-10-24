@@ -460,10 +460,27 @@
       const c = el('div', 'cand' + (i === candIdx ? ' on' : ''));
       c.append(wordEl('span', null, w.word));
       if (w.reading) c.append(el('small', null, w.reading));
-      c.addEventListener('pointerdown', (e) => { e.preventDefault(); pick(w); });
+      // 指を離した時に、ほとんど動いていなければ選ぶ（ドラッグは候補のスクロールにする）。
+      // 押した時の既定動作は止めて、検索欄から入力の焦点が外れないようにする
+      let down = null;
+      c.addEventListener('pointerdown', (e) => { e.preventDefault(); down = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+      c.addEventListener('pointerup', (e) => {
+        const d = down;
+        down = null;
+        if (d && d.id === e.pointerId && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10) pick(w);
+      });
+      c.addEventListener('pointercancel', () => { down = null; });
       cands.append(c);
     });
+    fitCands();
   }
+  // 候補は画面（スマホではキーボードの上まで）に収まる高さにし、はみ出す分はこの中でスクロール
+  function fitCands() {
+    if (!cands.firstChild) return;
+    const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
+    cands.style.maxHeight = Math.max(120, vh - cands.getBoundingClientRect().top - 12) + 'px';
+  }
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitCands);
   function pick(w) {
     hideCands();
     q.blur();
