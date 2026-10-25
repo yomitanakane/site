@@ -215,14 +215,8 @@
         tagPolys.get(tag).push(poly);
       }
     }
-    // 線の色：濃い線は水色、薄い線ほど緑に近づける（濃さ＝不透明度はそのまま）
     buckets = [...bm.values()].sort((x, y) => x.alpha - y.alpha || x.direct - y.direct);
-    const lo = Math.min(...buckets.map((b) => b.alpha)), hi = Math.max(...buckets.map((b) => b.alpha));
-    for (const b of buckets) {
-      const k = hi > lo ? (b.alpha - lo) / (hi - lo) : 1;
-      const c = LINE_FAINT.map((v, i) => Math.round(v + (LINE_DARK[i] - v) * k));
-      b.color = `rgba(${c[0]},${c[1]},${c[2]},${b.alpha})`;
-    }
+    for (const b of buckets) b.color = `rgba(0,140,220,${b.alpha})`; // 水色（濃さは線ごと）
 
     if (nodes.length) {
       bounds.minX = Math.min(...nodes.map((n) => n.x - n.bw / 2));
@@ -236,9 +230,6 @@
     }
     paint();
   }
-
-  // 線の色（濃い線 → 薄い線）
-  const LINE_DARK = [0, 140, 220], LINE_FAINT = [30, 165, 85];
 
   // 画面に掛かる線だけを描く
   function strokePolys(list, z, ox, oy) {
@@ -262,7 +253,7 @@
     for (const b of buckets) {
       ctx.strokeStyle = b.color;
       // 単語本体とそのタグの単語を直接結ぶ線は少し太く
-      ctx.lineWidth = b.direct ? base * 1.8 : base;
+      ctx.lineWidth = b.direct ? base * 1.5 : base;
       strokePolys(b.polys, z, ox, oy);
     }
     const hi = hiTag && tagPolys.get(hiTag);

@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L6';
+  const VERSION = 'L7';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -120,6 +120,8 @@
    * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
    * tight[gi]: 閉じた語群か（単語同士の結びつきが濃く、ほかの単語との結びつきが少ないタグ。compute の TIGHT_*）
    */
+  // 2〜SMALL_MAX 語のタグは、最初に置いた単語のすぐ周りにまとめて置く
+  const SMALL_MAX = 4, SMALL_OPEN_ALL = true;
   function place(nodes, groups, hubs, tight) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
@@ -244,10 +246,17 @@
     for (let i = 0; i < n; i++) if (hubOf[i] >= 0) members[hubOf[i]].push(i);
     // 閉じた語群は、最初に置いた単語のすぐ周りに残りの単語を置く（複数に属する時は単語の少ない語群を優先）
     const clusterOf = new Int32Array(n).fill(-1);
+    const isCluster = (gi) => tight[gi] || groups[gi].length <= SMALL_MAX;
+    // 単語ごとの、まとめて置くタグ（単語の少ない順）
+    const clustersOf = Array.from({ length: n }, () => []);
     groups.forEach((g, gi) => {
-      if (!tight[gi]) return;
-      for (const i of g) if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
+      if (!isCluster(gi)) return;
+      for (const i of g) {
+        clustersOf[i].push(gi);
+        if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
+      }
     });
+    for (const list of clustersOf) list.sort((p, q) => groups[p].length - groups[q].length);
     const opened = new Uint8Array(groups.length);
     const done = new Uint8Array(n);
     function put(i, tx, ty) {
@@ -268,10 +277,19 @@
       xs[i] = px; ys[i] = py;
       cellsOf(i, px, py, (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
       for (const j of members[i]) put(j, px, py);
-      const c = clusterOf[i];
-      if (c >= 0 && !opened[c]) {
-        opened[c] = 1;
-        for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
+      if (SMALL_OPEN_ALL) {
+        // その単語が属する、まとめて置くタグすべての単語をすぐ周りへ
+        for (const c of clustersOf[i]) {
+          if (opened[c]) continue;
+          opened[c] = 1;
+          for (const j of groups[c]) put(j, px, py);
+        }
+      } else {
+        const c = clusterOf[i];
+        if (c >= 0 && !opened[c]) {
+          opened[c] = 1;
+          for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
+        }
       }
     }
     for (const i of order) {
@@ -289,6 +307,7 @@
    * その間を単語数（対数）の割合でグラデーションにする。GAMMA が大きいほど濃淡の差がはっきりする。
    */
   const A_MAX = 0.4, A_MIN = 0.07, GAMMA = 2;
+  const FAINT_FROM = 15, FAINT_SCALE = 0.5;
   function alphaScale(groups) {
     const sizes = groups.map((g) => g.length).filter((m) => m > 1);
     const lo = Math.log(Math.min(...sizes, 2)), hi = Math.log(Math.max(...sizes, 2));
@@ -392,7 +411,8 @@
     groups.forEach((ids, ti) => {
       const m = ids.length;
       if (m < 2) return;
-      const a = alphaFor(m);
+      // 単語の多いタグ（FAINT_FROM 語以上）の線はさらに薄く
+      const a = alphaFor(m) * (m >= FAINT_FROM ? FAINT_SCALE : 1);
       // タグと同じ名前の単語（単語本体）があれば、そのタグの単語はすべて単語本体と直接結ぶ
       if (hubs[ti].length) {
         for (const h of hubs[ti]) for (const v of ids) if (v !== h) addPair(h, v, a, ti, true);
