@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L7';
+  const VERSION = 'L8';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -120,8 +120,12 @@
    * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
    * tight[gi]: 閉じた語群か（単語同士の結びつきが濃く、ほかの単語との結びつきが少ないタグ。compute の TIGHT_*）
    */
-  // 2〜SMALL_MAX 語のタグは、最初に置いた単語のすぐ周りにまとめて置く
-  const SMALL_MAX = 4, SMALL_OPEN_ALL = true;
+  /*
+   * 2〜SMALL_MAX 語のタグは、置いた単語の周りにそのタグの単語を置く。
+   * SMALL_DEPTH: 周りに置いた単語から、さらにその単語のタグの単語をたどる段数（大きいほど大きなかたまりになる）
+   * SMALL_GAP: 周りに置く時に、最低限あける距離（px。0 ならすぐ隣）
+   */
+  const SMALL_MAX = 4, SMALL_DEPTH = 1, SMALL_GAP = 200;
   function place(nodes, groups, hubs, tight) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
@@ -245,26 +249,25 @@
     const members = Array.from({ length: n }, () => []);
     for (let i = 0; i < n; i++) if (hubOf[i] >= 0) members[hubOf[i]].push(i);
     // 閉じた語群は、最初に置いた単語のすぐ周りに残りの単語を置く（複数に属する時は単語の少ない語群を優先）
+    // 閉じた語群は、最初に置いた単語のすぐ周りに残りを置く（複数に属する時は単語の少ない語群を優先）
     const clusterOf = new Int32Array(n).fill(-1);
-    const isCluster = (gi) => tight[gi] || groups[gi].length <= SMALL_MAX;
-    // 単語ごとの、まとめて置くタグ（単語の少ない順）
-    const clustersOf = Array.from({ length: n }, () => []);
     groups.forEach((g, gi) => {
-      if (!isCluster(gi)) return;
-      for (const i of g) {
-        clustersOf[i].push(gi);
-        if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
-      }
+      if (!tight[gi]) return;
+      for (const i of g) if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
     });
-    for (const list of clustersOf) list.sort((p, q) => groups[p].length - groups[q].length);
+    // 単語ごとの、周りに置く小さいタグ（単語の少ない順）
+    const smallOf = Array.from({ length: n }, () => []);
+    groups.forEach((g, gi) => { if (!tight[gi] && g.length <= SMALL_MAX) for (const i of g) smallOf[i].push(gi); });
+    for (const list of smallOf) list.sort((p, q) => groups[p].length - groups[q].length);
     const opened = new Uint8Array(groups.length);
     const done = new Uint8Array(n);
-    function put(i, tx, ty) {
+    // (tx, ty) から最も近い空いている場所へ置く（gap > 0 なら少なくともその距離は離す）
+    function put(i, tx, ty, depth, gap) {
       if (done[i]) return;
       done[i] = 1;
       let px = tx, py = ty;
-      if (!free(i, tx, ty)) {
-        search: for (let r = 8; r < 20000; r += 8 + r * 0.04) {
+      if (gap > 0 || !free(i, tx, ty)) {
+        search: for (let r = Math.max(8, gap); r < 20000; r += 8 + r * 0.04) {
           const k = Math.min(48, Math.max(8, Math.ceil((2 * Math.PI * r) / 10)));
           const a0 = rnd() * Math.PI * 2;
           for (let s = 0; s < k; s++) {
@@ -276,26 +279,24 @@
       }
       xs[i] = px; ys[i] = py;
       cellsOf(i, px, py, (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
-      for (const j of members[i]) put(j, px, py);
-      if (SMALL_OPEN_ALL) {
-        // その単語が属する、まとめて置くタグすべての単語をすぐ周りへ
-        for (const c of clustersOf[i]) {
-          if (opened[c]) continue;
-          opened[c] = 1;
-          for (const j of groups[c]) put(j, px, py);
-        }
-      } else {
-        const c = clusterOf[i];
-        if (c >= 0 && !opened[c]) {
-          opened[c] = 1;
-          for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
+      for (const j of members[i]) put(j, px, py, 0, 0);
+      const c = clusterOf[i];
+      if (c >= 0 && !opened[c]) {
+        opened[c] = 1;
+        for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py, 0, 0);
+      }
+      if (depth > 0) {
+        for (const g of smallOf[i]) {
+          if (opened[g]) continue;
+          opened[g] = 1;
+          for (const j of groups[g]) put(j, px, py, depth - 1, SMALL_GAP);
         }
       }
     }
     for (const i of order) {
       const h = hubOf[i];
-      if (h >= 0) put(h, xs[h], ys[h]); // 単語本体を先に置く（その周りに i も置かれる）
-      put(i, xs[i], ys[i]);
+      if (h >= 0) put(h, xs[h], ys[h], SMALL_DEPTH, 0); // 単語本体を先に置く（その周りに i も置かれる）
+      put(i, xs[i], ys[i], SMALL_DEPTH, 0);
     }
     return { xs, ys };
   }
