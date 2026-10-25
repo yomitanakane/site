@@ -199,22 +199,30 @@
     // 線は点列 [x0, y0, x1, y1, …] と、画面外の線を飛ばすための範囲
     const bm = new Map();
     tagPolys.clear();
-    for (const [alpha, tagIdx, p] of L.edges) {
+    for (const [alpha, tagIdx, p, direct] of L.edges) {
       let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
       for (let k = 0; k < p.length; k += 2) {
         if (p[k] < l) l = p[k]; if (p[k] > r) r = p[k];
         if (p[k + 1] < t) t = p[k + 1]; if (p[k + 1] > b) b = p[k + 1];
       }
       const poly = { p, l, t, r, b };
-      if (!bm.has(alpha)) bm.set(alpha, []);
-      bm.get(alpha).push(poly);
+      const key = alpha + (direct ? '|d' : '');
+      if (!bm.has(key)) bm.set(key, { alpha, direct: !!direct, polys: [] });
+      bm.get(key).polys.push(poly);
       for (const ti of tagIdx) {
         const tag = L.tags[ti];
         if (!tagPolys.has(tag)) tagPolys.set(tag, []);
         tagPolys.get(tag).push(poly);
       }
     }
-    buckets = [...bm.entries()].sort((x, y) => x[0] - y[0]).map(([alpha, polys]) => ({ alpha, polys }));
+    // 線の色：濃い線は水色、薄い線ほど緑に近づける（濃さ＝不透明度はそのまま）
+    buckets = [...bm.values()].sort((x, y) => x.alpha - y.alpha || x.direct - y.direct);
+    const lo = Math.min(...buckets.map((b) => b.alpha)), hi = Math.max(...buckets.map((b) => b.alpha));
+    for (const b of buckets) {
+      const k = hi > lo ? (b.alpha - lo) / (hi - lo) : 1;
+      const c = LINE_FAINT.map((v, i) => Math.round(v + (LINE_DARK[i] - v) * k));
+      b.color = `rgba(${c[0]},${c[1]},${c[2]},${b.alpha})`;
+    }
 
     if (nodes.length) {
       bounds.minX = Math.min(...nodes.map((n) => n.x - n.bw / 2));
@@ -228,6 +236,9 @@
     }
     paint();
   }
+
+  // 線の色（濃い線 → 薄い線）
+  const LINE_DARK = [0, 140, 220], LINE_FAINT = [30, 165, 85];
 
   // 画面に掛かる線だけを描く
   function strokePolys(list, z, ox, oy) {
@@ -246,10 +257,12 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const z = cam.z, ox = Math.round(W / 2 - cam.x * z), oy = Math.round(H / 2 - cam.y * z);
-    ctx.lineWidth = dpr >= 1.5 ? 1 / dpr : 0.6;
+    const base = dpr >= 1.5 ? 1 / dpr : 0.6;
     ctx.lineJoin = 'round';
     for (const b of buckets) {
-      ctx.strokeStyle = `rgba(0,140,220,${b.alpha})`; // 水色（濃さは今まで通り）
+      ctx.strokeStyle = b.color;
+      // 単語本体とそのタグの単語を直接結ぶ線は少し太く
+      ctx.lineWidth = b.direct ? base * 1.8 : base;
       strokePolys(b.polys, z, ox, oy);
     }
     const hi = hiTag && tagPolys.get(hiTag);
