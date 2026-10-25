@@ -336,7 +336,8 @@
     const l = Math.min(...ns.map((n) => n.x - n.bw / 2)), r = Math.max(...ns.map((n) => n.x + n.bw / 2));
     const t = Math.min(...ns.map((n) => n.y - n.bh / 2)), b = Math.max(...ns.map((n) => n.y + n.bh / 2));
     // 左上の検索欄・右上のボタンにかからない余白をとる
-    const z = Math.min(Z_START, (W - 80) / Math.max(1, r - l), (H - 150) / Math.max(1, b - t));
+    // （画面がとても小さい時でも、余白を引いた幅・高さが小さくなりすぎないように）
+    const z = Math.min(Z_START, Math.max(W - 80, W * 0.5) / Math.max(1, r - l), Math.max(H - 150, H * 0.5) / Math.max(1, b - t));
     flyTo((l + r) / 2, (t + b) / 2, null, z);
     render();
   }

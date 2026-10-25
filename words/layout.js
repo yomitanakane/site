@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L5';
+  const VERSION = 'L6';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -118,13 +118,15 @@
   /*
    * タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
    * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
+   * tight[gi]: 閉じた語群か（単語同士の結びつきが濃く、ほかの単語との結びつきが少ないタグ。compute の TIGHT_*）
    */
-  function place(nodes, groups, hubs) {
+  function place(nodes, groups, hubs, tight) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
     if (!n) return { xs, ys };
     const rnd = mulberry32(hashStr(nodes.map((d) => d.id).join('\u0001')));
-    const gs = groups.map((g) => strength(g.length));
+    // 閉じた語群は、単語の少ないタグと同じくらい強く引き寄せる
+    const gs = groups.map((g, gi) => (tight[gi] ? Math.max(strength(g.length), strength(2)) : strength(g.length)));
 
     // 半幅・半高（枠同士の最低限の余白を含む）
     const hw = new Float64Array(n), hh = new Float64Array(n);
@@ -240,6 +242,13 @@
     });
     const members = Array.from({ length: n }, () => []);
     for (let i = 0; i < n; i++) if (hubOf[i] >= 0) members[hubOf[i]].push(i);
+    // 閉じた語群は、最初に置いた単語のすぐ周りに残りの単語を置く（複数に属する時は単語の少ない語群を優先）
+    const clusterOf = new Int32Array(n).fill(-1);
+    groups.forEach((g, gi) => {
+      if (!tight[gi]) return;
+      for (const i of g) if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
+    });
+    const opened = new Uint8Array(groups.length);
     const done = new Uint8Array(n);
     function put(i, tx, ty) {
       if (done[i]) return;
@@ -259,6 +268,11 @@
       xs[i] = px; ys[i] = py;
       cellsOf(i, px, py, (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
       for (const j of members[i]) put(j, px, py);
+      const c = clusterOf[i];
+      if (c >= 0 && !opened[c]) {
+        opened[c] = 1;
+        for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
+      }
     }
     for (const i of order) {
       const h = hubOf[i];
@@ -673,6 +687,7 @@
    * words.json の中身から layout.json の中身を作る。
    * { sig, pos: [[x, y], …]（単語の並び順）, tags: [タグ名, …], edges: [[濃さ, [タグ番号…], [x0, y0, x1, y1, …]], …] }
    */
+  const TIGHT_MIN = 3, TIGHT_MAX = 12, TIGHT_RATIO = 0.7;
   function compute(raw) {
     const data = linkData(raw);
     const nodes = data.list.map((w) => ({ id: w.id, bw: boxWidth(w.word), bh: BOX_H }));
@@ -682,7 +697,15 @@
     const linked = tagIndex.map((i) => groups[i]);
     // そのタグと同じ名前の単語
     const hubs = tagIndex.map((i) => groups[i].filter((w) => data.list[w].selfTag === tags[i]));
-    const { xs, ys } = place(nodes, linked, hubs);
+    // 閉じた語群：TIGHT_MIN〜TIGHT_MAX 語のタグで、どの単語もつながる相手の TIGHT_RATIO 以上がそのタグの中にある
+    const neighbors = nodes.map(() => new Set());
+    for (const g of linked) for (const i of g) for (const j of g) if (i !== j) neighbors[i].add(j);
+    const tight = linked.map((g) => {
+      if (g.length < TIGHT_MIN || g.length > TIGHT_MAX) return false;
+      const set = new Set(g);
+      return g.every((i) => { let k = 0; for (const j of neighbors[i]) if (set.has(j)) k++; return k >= neighbors[i].size * TIGHT_RATIO; });
+    });
+    const { xs, ys } = place(nodes, linked, hubs, tight);
     const edges = connect(nodes, linked, xs, ys, hubs);
     const r1 = (v) => Math.round(v * 10) / 10;
     return {
