@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L6';
+  const VERSION = 'L10';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -289,6 +289,8 @@
    * その間を単語数（対数）の割合でグラデーションにする。GAMMA が大きいほど濃淡の差がはっきりする。
    */
   const A_MAX = 0.4, A_MIN = 0.07, GAMMA = 2;
+  // 単語の多いタグ（FAINT_FROM 語以上）の線はさらに薄く
+  const FAINT_FROM = 15, FAINT_SCALE = 0.5;
   function alphaScale(groups) {
     const sizes = groups.map((g) => g.length).filter((m) => m > 1);
     const lo = Math.log(Math.min(...sizes, 2)), hi = Math.log(Math.max(...sizes, 2));
@@ -382,19 +384,20 @@
 
     // 1. 候補線（各単語から近い同タグの単語へ＋距離だけの最小全域木）から、掛かる単語が少ない線を優先して木を作る
     const pairs = new Map();
-    const addPair = (u, v, a, ti) => {
+    // direct: 単語本体とそのタグの単語を直接結ぶ線（サイトで少し太く表示する）
+    const addPair = (u, v, a, ti, direct) => {
       const i = Math.min(u, v), j = Math.max(u, v);
       const e = pairs.get(i * n + j);
-      if (!e) pairs.set(i * n + j, { i, j, a, tags: [ti] });
-      else { if (a > e.a) e.a = a; if (!e.tags.includes(ti)) e.tags.push(ti); }
+      if (!e) pairs.set(i * n + j, { i, j, a, tags: [ti], direct: !!direct });
+      else { if (a > e.a) e.a = a; if (!e.tags.includes(ti)) e.tags.push(ti); if (direct) e.direct = true; }
     };
     groups.forEach((ids, ti) => {
       const m = ids.length;
       if (m < 2) return;
-      const a = alphaFor(m);
+      const a = alphaFor(m) * (m >= FAINT_FROM ? FAINT_SCALE : 1);
       // タグと同じ名前の単語（単語本体）があれば、そのタグの単語はすべて単語本体と直接結ぶ
       if (hubs[ti].length) {
-        for (const h of hubs[ti]) for (const v of ids) if (v !== h) addPair(h, v, a, ti);
+        for (const h of hubs[ti]) for (const v of ids) if (v !== h) addPair(h, v, a, ti, true);
         return;
       }
       const d2 = (u, v) => (xs[ids[u]] - xs[ids[v]]) ** 2 + (ys[ids[u]] - ys[ids[v]]) ** 2;
@@ -712,11 +715,12 @@
       sig: signature(data),
       pos: nodes.map((_, i) => [r1(xs[i]), r1(ys[i])]),
       tags,
-      edges: edges.map((e) => [
-        Math.round(e.a * 100) / 100,
-        e.tags.map((t) => tagIndex[t]),
-        simplify(e.pts, 0.4).flatMap((p) => [r1(p[0]), r1(p[1])]),
-      ]),
+      // 線：[濃さ, [タグ番号…], 点列, （単語本体と直接結ぶ線なら 1）]
+      edges: edges.map((e) => {
+        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.4).flatMap((p) => [r1(p[0]), r1(p[1])])];
+        if (e.direct) row.push(1);
+        return row;
+      }),
     };
   }
 
