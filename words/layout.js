@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L8';
+  const VERSION = 'L9';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -531,7 +531,8 @@
       return null;
     }
     // 周囲の単語の角を経由点にした最短経路
-    function aroundBoxes(e, ax, ay, bx, by, off = 4, limit = 16) {
+    // segCost: 区間ごとの追加の重み（線同士の重なりを避ける時に使う）
+    function aroundBoxes(e, ax, ay, bx, by, off = 4, limit = 16, segCost = null) {
       const pad = 200;
       const l = Math.min(ax, bx) - pad, r = Math.max(ax, bx) + pad, t = Math.min(ay, by) - pad, btm = Math.max(ay, by) + pad;
       const obs = new Set();
@@ -565,8 +566,10 @@
         done[u] = 1;
         for (let v = 0; v < m; v++) {
           if (done[v]) continue;
-          const d = dist[u] + Math.hypot(pts[v][0] - pts[u][0], pts[v][1] - pts[u][1]);
-          if (d < dist[v] && clear(pts[u][0], pts[u][1], pts[v][0], pts[v][1], e)) { dist[v] = d; prev[v] = u; }
+          let d = dist[u] + Math.hypot(pts[v][0] - pts[u][0], pts[v][1] - pts[u][1]);
+          if (d >= dist[v] || !clear(pts[u][0], pts[u][1], pts[v][0], pts[v][1], e)) continue;
+          if (segCost) { d += segCost(pts[u], pts[v]); if (d >= dist[v]) continue; }
+          dist[v] = d; prev[v] = u;
         }
       }
       if (prev[1] < 0) return null;
@@ -682,6 +685,87 @@
     for (const e of edges) {
       e.pts = clear(xs[e.i], ys[e.i], xs[e.j], ys[e.j], e) ? [[xs[e.i], ys[e.i]], [xs[e.j], ys[e.j]]] : route(e);
     }
+
+    // 4. 線同士が重なりすぎないようにする（交差はかまわない）。
+    //    ほかの線とほぼ同じ所をほぼ同じ向きに走る部分が長い線は、単語に掛からない弧のうち重なりの少ないものに替える。
+    //    濃い線（単語の少ないタグ）から順に決めるので、濃い線ほどまっすぐに残る。
+    const OG = 40, NEAR = 3.5, PARALLEL = Math.cos((15 * Math.PI) / 180), STEP = 5, SKIP_END = 20;
+    const og = new Map();
+    const addPath = (pts, e) => {
+      for (let k = 1; k < pts.length; k++) {
+        const s = [pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1], e];
+        const x0 = Math.floor((Math.min(s[0], s[2]) - NEAR) / OG), x1 = Math.floor((Math.max(s[0], s[2]) + NEAR) / OG);
+        const y0 = Math.floor((Math.min(s[1], s[3]) - NEAR) / OG), y1 = Math.floor((Math.max(s[1], s[3]) + NEAR) / OG);
+        for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+          const key = cellKey(gx, gy);
+          let c = og.get(key);
+          if (!c) og.set(key, (c = []));
+          c.push(s);
+        }
+      }
+    };
+    // 点列のうち、ほかの線と重なって走る長さ（px）。自分の端点の近くは数えない（同じ単語から出る線は必ず近づくため）
+    function overlap(pts, e, limit = Infinity) {
+      let len = 0;
+      const A = pts[0], B = pts[pts.length - 1];
+      for (let k = 1; k < pts.length; k++) {
+        const [ax, ay] = pts[k - 1], [bx, by] = pts[k];
+        const L = Math.hypot(bx - ax, by - ay);
+        if (!L) continue;
+        const ux = (bx - ax) / L, uy = (by - ay) / L;
+        for (let t = STEP / 2; t < L; t += STEP) {
+          const px = ax + ux * t, py = ay + uy * t;
+          if (Math.hypot(px - A[0], py - A[1]) < SKIP_END || Math.hypot(px - B[0], py - B[1]) < SKIP_END) continue;
+          const c = og.get(cellKey(Math.floor(px / OG), Math.floor(py / OG)));
+          if (!c) continue;
+          for (const s of c) {
+            if (s[4] === e) continue;
+            const sx = s[2] - s[0], sy = s[3] - s[1], sl = Math.hypot(sx, sy);
+            if (!sl || Math.abs((sx * ux + sy * uy) / sl) < PARALLEL) continue;
+            const q = Math.max(0, Math.min(1, ((px - s[0]) * sx + (py - s[1]) * sy) / (sl * sl)));
+            if (Math.hypot(px - (s[0] + sx * q), py - (s[1] + sy * q)) < NEAR) { len += STEP; break; }
+          }
+          if (len > limit) return len;
+        }
+      }
+      return len;
+    }
+    const byDark = edges.slice().sort((p, q) => q.a - p.a || Math.hypot(xs[p.i] - xs[p.j], ys[p.i] - ys[p.j]) - Math.hypot(xs[q.i] - xs[q.j], ys[q.i] - ys[q.j]));
+    for (const e of byDark) {
+      let best = e.pts, bestO = overlap(e.pts, e);
+      if (bestO > 15) {
+        const A = [xs[e.i], ys[e.i]], B = [xs[e.j], ys[e.j]];
+        const consider = (c) => {
+          if (!pathClear(c, e)) return false;
+          const o = overlap(c, e, bestO);
+          if (o < bestO) { best = c; bestO = o; }
+          return bestO <= 15;
+        };
+        let ok = false;
+        for (const c of arcs(A, B)) if (minRadius(c) >= GENTLE && (ok = consider(c))) break;
+        // 単語の角を回る道は、角からの離れ具合を変えると別の道筋になる（同じ角を回る線が重ならないように）
+        if (!ok) {
+          search: for (const off of [12, 20, 32, 48, 64, 80]) {
+            const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off);
+            if (!v) continue;
+            const p = [A, ...v, B];
+            for (const c of [spline(p), rounded(p, 80), rounded(p, 40)]) if (consider(c)) break search;
+          }
+        }
+        // それでも重なりが大きい線は、重なる区間を遠回りとみなして（重なり1pxを4px分として）道を探し直す
+        if (bestO > 100) {
+          const cost = (p, q) => 4 * overlap([p, q], e);
+          for (const off of [16, 40]) {
+            const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off, 24, cost);
+            if (!v) continue;
+            const p = [A, ...v, B];
+            for (const c of [spline(p), rounded(p, 80), rounded(p, 40)]) consider(c);
+          }
+        }
+      }
+      e.pts = best;
+      addPath(best, e);
+    }
     return edges;
   }
 
@@ -736,7 +820,7 @@
       tags,
       // 線：[濃さ, [タグ番号…], 点列, （単語本体と直接結ぶ線なら 1）]
       edges: edges.map((e) => {
-        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.4).flatMap((p) => [r1(p[0]), r1(p[1])])];
+        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.8).flatMap((p) => [r1(p[0]), r1(p[1])])];
         if (e.direct) row.push(1);
         return row;
       }),

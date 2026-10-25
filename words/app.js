@@ -216,7 +216,12 @@
       }
     }
     buckets = [...bm.values()].sort((x, y) => x.alpha - y.alpha || x.direct - y.direct);
-    for (const b of buckets) b.color = `rgba(0,140,220,${b.alpha})`; // 水色（濃さは線ごと）
+    // 線は不透明にし、濃さは色の濃淡で表す（白地に水色を濃さの割合で重ねた色）。
+    // 薄い線から描くので、濃い線が常に上になる
+    for (const b of buckets) {
+      const c = [0, 140, 220].map((v) => Math.round(255 + (v - 255) * b.alpha));
+      b.color = `rgb(${c[0]},${c[1]},${c[2]})`;
+    }
 
     if (nodes.length) {
       bounds.minX = Math.min(...nodes.map((n) => n.x - n.bw / 2));
