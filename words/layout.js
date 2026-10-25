@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L4';
+  const VERSION = 'L5';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -324,11 +324,12 @@
   /*
    * タグごとに単語を木で結び、線の上に別の単語が乗らないようにする。
    * 1. 近い単語同士の候補線から、単語に掛からない線を優先して木を作る
+   *    （タグと同じ名前の単語がある時は、そのタグの単語をすべてその単語と直接結ぶ）
    * 2. それでも線に掛かる単語は、近くの空いている場所へずらす
    * 3. ずらせなかった所は、線を曲げて単語を避ける
    * 戻り値：[{ i, j, a（濃さ）, tags（タグ番号）, pts（点列） }]
    */
-  function connect(nodes, groups, xs, ys) {
+  function connect(nodes, groups, xs, ys, hubs) {
     const n = nodes.length;
     if (!n) return [];
     const alphaFor = alphaScale(groups);
@@ -367,10 +368,21 @@
 
     // 1. 候補線（各単語から近い同タグの単語へ＋距離だけの最小全域木）から、掛かる単語が少ない線を優先して木を作る
     const pairs = new Map();
+    const addPair = (u, v, a, ti) => {
+      const i = Math.min(u, v), j = Math.max(u, v);
+      const e = pairs.get(i * n + j);
+      if (!e) pairs.set(i * n + j, { i, j, a, tags: [ti] });
+      else { if (a > e.a) e.a = a; if (!e.tags.includes(ti)) e.tags.push(ti); }
+    };
     groups.forEach((ids, ti) => {
       const m = ids.length;
       if (m < 2) return;
       const a = alphaFor(m);
+      // タグと同じ名前の単語（単語本体）があれば、そのタグの単語はすべて単語本体と直接結ぶ
+      if (hubs[ti].length) {
+        for (const h of hubs[ti]) for (const v of ids) if (v !== h) addPair(h, v, a, ti);
+        return;
+      }
       const d2 = (u, v) => (xs[ids[u]] - xs[ids[v]]) ** 2 + (ys[ids[u]] - ys[ids[v]]) ** 2;
       const cand = new Map();
       const addCand = (u, v) => { const key = u < v ? u * m + v : v * m + u; if (!cand.has(key)) cand.set(key, [Math.min(u, v), Math.max(u, v)]); };
@@ -405,10 +417,7 @@
         const ru = rootOf(u), rv = rootOf(v);
         if (ru === rv) continue;
         parent[ru] = rv;
-        const i = Math.min(ids[u], ids[v]), j = Math.max(ids[u], ids[v]);
-        const e = pairs.get(i * n + j);
-        if (!e) pairs.set(i * n + j, { i, j, a, tags: [ti] });
-        else { if (a > e.a) e.a = a; e.tags.push(ti); }
+        addPair(ids[u], ids[v], a, ti);
       }
     });
     const edges = [...pairs.values()];
@@ -674,7 +683,7 @@
     // そのタグと同じ名前の単語
     const hubs = tagIndex.map((i) => groups[i].filter((w) => data.list[w].selfTag === tags[i]));
     const { xs, ys } = place(nodes, linked, hubs);
-    const edges = connect(nodes, linked, xs, ys);
+    const edges = connect(nodes, linked, xs, ys, hubs);
     const r1 = (v) => Math.round(v * 10) / 10;
     return {
       sig: signature(data),
