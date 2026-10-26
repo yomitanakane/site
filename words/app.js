@@ -59,7 +59,7 @@
 
   // 頭文字の五十音表（5列。空白は空きマス）
   const KANA_TABLE = ['あいうえお', 'かきくけこ', 'がぎぐげご', 'さしすせそ', 'ざじずぜぞ', 'たちつてと', 'だぢづでど', 'なにぬねの',
-    'はひふへほ', 'ばびぶべぼ', 'ぱぴぷぺぽ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わ   を', 'ん    ', 'ゔ    '];
+    'はひふへほ', 'ばびぶべぼ', 'ぱぴぷぺぽ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わ   を', 'ん ゔ  '];
   const SMALL_TO_BIG = { ぁ: 'あ', ぃ: 'い', ぅ: 'う', ぇ: 'え', ぉ: 'お', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ', ゎ: 'わ', っ: 'つ', ゕ: 'か', ゖ: 'け', ゐ: 'い', ゑ: 'え' };
 
   let linkInfo = null;
@@ -658,14 +658,14 @@
     scroller.scrollTop = 0;
     panel.style.visibility = 'hidden';
     const to = panel.getBoundingClientRect();
-    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
+    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
     const done = () => {
       panel.style.visibility = '';
-      scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
+      scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 95, easing: 'ease-out' });
       busy = false;
     };
-    if (fromRect) morph(fromRect, to, 230).then(done);
-    else { panel.style.visibility = ''; panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180 }); busy = false; }
+    if (fromRect) morph(fromRect, to, 155).then(done);
+    else { panel.style.visibility = ''; panel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120 }); busy = false; }
   }
 
   function closeDetail(then, quick) {
@@ -778,6 +778,9 @@
       box.style.left = '0px';
       const over = box.getBoundingClientRect().right - (innerWidth - 8);
       if (over > 0) box.style.left = -over + 'px';
+      // 画面の下端まで全部収まるならスクロールせずに全部出す（収まらない時は CSS の高さでスクロール）
+      box.style.maxHeight = '';
+      if (box.scrollHeight + 2 <= innerHeight - box.getBoundingClientRect().top - 12) box.style.maxHeight = 'none';
     });
     popup(fMora, moraBox, kanaBox);
     popup(fInit, kanaBox, moraBox);
