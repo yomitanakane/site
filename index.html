@@ -28,6 +28,8 @@
       --fg: #111111;
       --mid: #555;
       --soft: #d8d8d8;
+      /* 四角形ボックス・タグ群の枠線色（--soft より濃い） */
+      --frame: #9b9b9b;
       --accent: #c9a0d4;
       --tag-bg: #ede0f8;
       --tag-fg: #7a3ea8;
@@ -57,7 +59,8 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    /* スクロールバーの有無でレイアウトがずれないよう、バー分の幅を常に確保 */
+    html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 
     body {
       background: var(--bg);
@@ -238,9 +241,9 @@
       letter-spacing: 0.05em;
       padding: 6px 18px;
       border-radius: 0;
-      border: 1px solid var(--soft);
-      /* 隣接ボタンと枠線を1pxで共有してくっつける */
-      margin: 0 -1px -1px 0;
+      border: 2px solid var(--frame);
+      /* 隣接ボタンと枠線(2px)を共有してくっつける */
+      margin: 0 -2px -2px 0;
       position: relative;
       background: transparent;
       color: #444;
@@ -395,7 +398,7 @@
 
     /* ========== CONTACT 四角枠ボックス ========== */
     .contact-box {
-      border: 1px solid var(--soft);
+      border: 2px solid var(--frame);
       background: #fff;
       margin-bottom: 28px;
     }
@@ -405,7 +408,7 @@
 
     /* ========== CONTACT インフォ・アコーディオン（ボックス下部に接続） ========== */
     .contact-info-accordion { display: flex; flex-direction: column; }
-    .contact-info-details { border-top: 1px solid var(--soft); }
+    .contact-info-details { border-top: 2px solid var(--frame); }
     .contact-info-summary {
       display: flex;
       align-items: center;
@@ -455,7 +458,7 @@
     .gl-hero-text { font-size: 28px; font-weight: 700; line-height: 1.5; color: var(--fg); margin-bottom: 6px; }
     .gl-section { margin-bottom: 28px; }
     .gl-section.gl-box {
-      border: 1px solid var(--soft);
+      border: 2px solid var(--frame);
       background: #fff;
       padding: 22px 24px;
     }
@@ -471,8 +474,8 @@
     .gl-tag-chip:hover { opacity: 0.8; transform: translateY(-1px); }
 
     /* Q&A アコーディオン */
-    .qa-list { display: flex; flex-direction: column; border: 1px solid var(--soft); }
-    .qa-item { border-top: 1px solid var(--soft); }
+    .qa-list { display: flex; flex-direction: column; border: 2px solid var(--frame); }
+    .qa-item { border-top: 2px solid var(--frame); }
     .qa-item:first-child { border-top: none; }
     .qa-question { width: 100%; text-align: left; background: none; border: none; font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 500; color: var(--fg); padding: 14px 16px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: background 0.15s; line-height: 1.6; }
     .qa-question:hover { background: #f2ecf8; }
