@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+  { title: "ハロウィンイラスト", tag: "イラスト", year:"2026", url: "https://x.com/yomitanakane/status/2116419185547132975?a=OD_rcAZiW2hTcAUrPlw&s=20", img:"images/HALLOWEEN.jpg"},
 　{ title: "ぬゆり『悪意が垂る』", tag: "映像", year:"2026", url: "https://www.youtube.com/watch?v=2z1wHcvRC6I", img:"images/Akui.png"},
   { title: "検索可能クイズYomitanQ", tag: "サイト", year:"2026", url: "https://yomitanakane.com/YomitanQ/", img:"images/YomitanQ.png"},
   { title: "読谷あかねの「よ」で始まる言葉当て", tag: "サイト", year:"2026", url: "https://yomitanakane.com/StartYO/", img:"images/StartYO.png"},
