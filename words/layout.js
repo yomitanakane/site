@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L10';
+  const VERSION = 'L11';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -274,12 +274,15 @@
         for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
       }
     }
+    // 円の中央（原点）に一番近い単語を、ちょうど中央に置く（その後の線よけでも動かさない）
+    const center = order[0];
+    put(center, 0, 0);
     for (const i of order) {
       const h = hubOf[i];
       if (h >= 0) put(h, xs[h], ys[h]); // 単語本体を先に置く（その周りに i も置かれる）
       put(i, xs[i], ys[i]);
     }
-    return { xs, ys };
+    return { xs, ys, center };
   }
 
   /* ================= 線 ================= */
@@ -345,7 +348,8 @@
    * 3. ずらせなかった所は、線を曲げて単語を避ける
    * 戻り値：[{ i, j, a（濃さ）, tags（タグ番号）, pts（点列） }]
    */
-  function connect(nodes, groups, xs, ys, hubs) {
+  // fixed: 線よけのために動かさない単語（円の中央の単語）
+  function connect(nodes, groups, xs, ys, hubs, fixed) {
     const n = nodes.length;
     if (!n) return [];
     const alphaFor = alphaScale(groups);
@@ -472,7 +476,7 @@
         const [a, b, c, d] = segOf(k);
         walkCells(a, b, c, d, (key) => {
           const s = boxG.get(key);
-          if (s) for (const o of s) if (o !== e.i && o !== e.j && hitBox(o, a, b, c, d)) bad.add(o);
+          if (s) for (const o of s) if (o !== e.i && o !== e.j && o !== fixed && hitBox(o, a, b, c, d)) bad.add(o);
         });
       });
       if (!bad.size) break;
@@ -708,8 +712,8 @@
       const set = new Set(g);
       return g.every((i) => { let k = 0; for (const j of neighbors[i]) if (set.has(j)) k++; return k >= neighbors[i].size * TIGHT_RATIO; });
     });
-    const { xs, ys } = place(nodes, linked, hubs, tight);
-    const edges = connect(nodes, linked, xs, ys, hubs);
+    const { xs, ys, center } = place(nodes, linked, hubs, tight);
+    const edges = connect(nodes, linked, xs, ys, hubs, center);
     const r1 = (v) => Math.round(v * 10) / 10;
     return {
       sig: signature(data),
