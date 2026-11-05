@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L12';
+  const VERSION = 'L13';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -38,10 +38,12 @@
         groups.get(t).push(i);
       }
     });
-    const tagByNorm = new Map();
-    for (const t of groups.keys()) tagByNorm.set(K.norm(t) || t, t);
+    // 単語名とタグ名は、タグどうしと同じ基準（K.tagKey：『』や長音「ー」を区別する）で比べる。
+    // 作品名の『版画』はタグ「版画」の本体にはならない
+    const tagByKey = new Map();
+    for (const t of groups.keys()) tagByKey.set(K.tagKey(t) || t, t);
     list.forEach((w, i) => {
-      w.selfTag = tagByNorm.get(K.norm(w.word) || w.word) || null;
+      w.selfTag = tagByKey.get(K.tagKey(w.word) || w.word) || null;
       if (w.selfTag && !w.tags.includes(w.selfTag)) groups.get(w.selfTag).push(i);
     });
     return { list, groups };
