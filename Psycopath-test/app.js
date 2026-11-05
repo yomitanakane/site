@@ -175,7 +175,7 @@ function reset() {
 }
 
 function share() {
-  const text = `サイコパステストで ${lastScore} %を記録した。${SHARE_URL}`;
+  const text = `サイコパステストでサイコパス度 ${lastScore}% を記録した ${SHARE_URL}`;
   const url = "https://x.com/intent/tweet?text=" + encodeURIComponent(text);
   window.open(url, "_blank", "noopener");
 }
