@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L11';
+  const VERSION = 'L12';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -120,6 +120,8 @@
    * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
    * tight[gi]: 閉じた語群か（単語同士の結びつきが濃く、ほかの単語との結びつきが少ないタグ。compute の TIGHT_*）
    */
+  // 2語のタグの相手を置く時にあける距離（px）
+  const PAIR_GAP = 100;
   function place(nodes, groups, hubs, tight) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
@@ -250,12 +252,17 @@
     });
     const opened = new Uint8Array(groups.length);
     const done = new Uint8Array(n);
-    function put(i, tx, ty) {
+    // 2語のタグで結ばれた相手（一番強い結びつき）
+    const pairOf = Array.from({ length: n }, () => []);
+    for (const g of groups) if (g.length === 2) { pairOf[g[0]].push(g[1]); pairOf[g[1]].push(g[0]); }
+    // withPairs: 置いた単語の、2語のタグの相手もすぐ近くに置くか（相手からさらには広げない）
+    // gap: 最低限あける距離（px）
+    function put(i, tx, ty, withPairs = true, gap = 0) {
       if (done[i]) return;
       done[i] = 1;
       let px = tx, py = ty;
-      if (!free(i, tx, ty)) {
-        search: for (let r = 8; r < 20000; r += 8 + r * 0.04) {
+      if (gap > 0 || !free(i, tx, ty)) {
+        search: for (let r = Math.max(8, gap); r < 20000; r += 8 + r * 0.04) {
           const k = Math.min(48, Math.max(8, Math.ceil((2 * Math.PI * r) / 10)));
           const a0 = rnd() * Math.PI * 2;
           for (let s = 0; s < k; s++) {
@@ -273,6 +280,8 @@
         opened[c] = 1;
         for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
       }
+      // 単語本体の周りなど別の所に寄せられても、2語のタグの相手とは離れすぎないように
+      if (withPairs) for (const j of pairOf[i]) put(j, px, py, false, PAIR_GAP);
     }
     // 円の中央（原点）に一番近い単語を、ちょうど中央に置く（その後の線よけでも動かさない）
     const center = order[0];
