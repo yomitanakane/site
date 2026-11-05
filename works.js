@@ -6,6 +6,7 @@
 ========================================================================== */
 const WORKS = [
   // ---------------------------------------------------------------- 2026
+  { title: "サイコパステスト", tag: "サイト", year:"2026", url: "https://yomitanakane.com/Psycopath-test/", img:"images/Psycopath.png"},
   { title: "ヲチニュ / 重音テト", tag: "楽曲", year:"2026", url: "https://www.youtube.com/watch?v=JoWEhQTC5jw", img:"images/WATCHNEW.jpg"},
   { title: "ハロウィンイラスト", tag: "イラスト", year:"2026", url: "https://x.com/yomitanakane/status/2116419185547132975?a=OD_rcAZiW2hTcAUrPlw&s=20", img:"images/HALLOWEEN.jpg"},
 　{ title: "ぬゆり『悪意が垂る』", tag: "映像", year:"2026", url: "https://www.youtube.com/watch?v=2z1wHcvRC6I", img:"images/Akui.png"},
