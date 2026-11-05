@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L13';
+  const VERSION = 'L14';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -254,6 +254,7 @@
     });
     const opened = new Uint8Array(groups.length);
     const done = new Uint8Array(n);
+    const going = new Uint8Array(n); // 本体を先に置こうとしている途中の単語（相互に本体の時の無限ループよけ）
     // 2語のタグで結ばれた相手（一番強い結びつき）
     const pairOf = Array.from({ length: n }, () => []);
     for (const g of groups) if (g.length === 2) { pairOf[g[0]].push(g[1]); pairOf[g[1]].push(g[0]); }
@@ -261,6 +262,15 @@
     // gap: 最低限あける距離（px）
     function put(i, tx, ty, withPairs = true, gap = 0) {
       if (done[i]) return;
+      // 単語本体（タグになっている単語）がまだ置かれていなければ、先に本体を置き、その周りに i を置く
+      // （2語のタグの相手として先に呼ばれた時も、本体から引き離されないように）
+      const h0 = hubOf[i];
+      if (h0 >= 0 && !done[h0] && !going[h0]) {
+        going[i] = 1;
+        put(h0, tx, ty, withPairs, gap);
+        going[i] = 0;
+        if (done[i]) return;
+      }
       done[i] = 1;
       let px = tx, py = ty;
       if (gap > 0 || !free(i, tx, ty)) {
