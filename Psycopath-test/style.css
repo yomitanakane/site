@@ -1,0 +1,249 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  --bg: #ffffff;
+  --fg: #000000;
+  --title: #8b0000;
+  --score: #d00000;
+  --hover: #d00000;
+  --mincho: "Noto Serif JP", "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "MS PMincho", serif;
+}
+
+/* サイコパス度100%のときは枠の外側だけ黒背景（枠の中は白のまま） */
+body.perfect {
+  background: #000000;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* スクロールバーの有無でレイアウトがずれないようにする */
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mincho);
+  line-height: 1.7;
+}
+
+/* ---------- 外枠 ---------- */
+.frame {
+  width: min(720px, calc(100% - 32px));
+  margin: 32px auto;
+  padding: 32px 40px 40px;
+  border: 2px solid var(--fg);
+  background: var(--bg);
+  text-align: left;
+}
+
+/* 結果画面は画面の中央に配置 */
+body.result-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+body.result-mode .frame {
+  margin: 16px auto;
+  text-align: center;
+}
+
+/* ---------- タイトル ---------- */
+.title {
+  margin: 0 0 24px;
+  color: var(--title);
+  font-weight: 900;
+  font-size: clamp(2rem, 8vw, 3rem);
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+}
+
+/* ---------- 質問 ---------- */
+.question {
+  margin: 0 0 32px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.question-text {
+  margin: 0 0 12px;
+  padding: 0;
+  font-weight: 400;
+  font-size: 1.1rem;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 選択肢：楕円の番号（ボタン）＋文字。行全体が押せる */
+.choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 15em;
+  max-width: 100%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.choice input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6em;
+  height: 2.4em;
+  border: 2px solid var(--fg);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.choice-label {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+@media (hover: hover) {
+  .choice:hover .mark {
+    border-color: var(--hover);
+  }
+}
+
+.choice input:focus-visible + .mark {
+  outline: 2px solid var(--hover);
+  outline-offset: 2px;
+}
+
+/* 選択中は色を反転 */
+.choice input:checked + .mark {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* ---------- 四角いボタン ---------- */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  min-height: 44px;
+  min-width: 8em;
+  padding: 8px 18px;
+  border: 2px solid var(--fg);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    border-color: var(--hover);
+  }
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--hover);
+  outline-offset: 2px;
+}
+
+.btn:active {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.form-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.error {
+  margin: 0;
+  color: var(--score);
+  font-weight: 700;
+}
+
+/* ---------- 結果 ---------- */
+.result-lead {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.result-score {
+  margin: 0;
+  color: var(--score);
+  font-weight: 900;
+  font-size: clamp(4.5rem, 22vw, 8rem);
+  line-height: 1.2;
+}
+
+.result-unit {
+  margin-left: 0.1em;
+}
+
+.result-answers {
+  margin: 8px 0 0;
+  font-size: 1.05rem;
+}
+
+.answer-word {
+  white-space: nowrap;
+}
+
+.result-note {
+  margin: 8px 0 0;
+  font-size: 0.7rem;
+}
+
+.result-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+@media (max-width: 480px) {
+  .frame {
+    margin: 16px auto;
+    padding: 24px 20px 28px;
+  }
+}
