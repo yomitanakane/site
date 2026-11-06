@@ -87,9 +87,6 @@ const WORKS = [
 	detail: { detail: "一部編集を担当", credit: "えいりな刃物,廣井結実,Cube,ミジンコ,荒木悟" } },
   { title: "消えないファイル / 重音テト",  tag: "楽曲", year: "2025", ytId: "Pea-FqG0IbY", img: "images/Kienai.png" },
   { title: "2代目閻魔300万再生記念イラスト",  tag: "イラスト", year: "2025", url: "https://x.com/yomitanakane/status/1973692034696491111?s=20", img: "images/2Daime_3m.png" },
-  { title: "Yomitan-Reference", tag: "その他", year:"2025", url: "https://scrapbox.io/Yomitan-Reference/", img:"images/Reference.png" ,
-	detail:{detail:"Cosenseページ"}},
-
   { title: "DigitalStars2025", tag: "出演", year:"2025", url: "https://digitalstars.club/hmds25/index.html", img:"images/DegiSta.png"},
   { title: "NIGHT HIKE Mid 2025 supported by ジンドゥー", tag: "出演", year:"2025", url: "https://nighthike.net/news/k_nszOdL", img:"images/NIGHTHIKE2025.jpg"},
   { title: "テトナイトごめんなさいセットリスト", tag: "その他", year:"2025", url: "https://www.nicovideo.jp/watch/sm45272051", img:"images/TetoNight.png"},
