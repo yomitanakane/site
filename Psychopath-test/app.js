@@ -63,7 +63,7 @@ const QUESTIONS = [
 ];
 
 const PSYCO_CHARS = new Set(["さ", "い", "こ", "ぱ", "す"]);
-const SHARE_URL = "https://yomitanakane.com/Psycopath-test";
+const SHARE_URL = "https://yomitanakane.com/Psychopath-test";
 
 const KANJI_NUM = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 

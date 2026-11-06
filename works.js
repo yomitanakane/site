@@ -7,7 +7,7 @@
 const WORKS = [
   // ---------------------------------------------------------------- 2026
   { title: "WORDS", tag: "サイト", year:"2026", url: "https://yomitanakane.com/words/", img:"images/WORDS.png"},
-  { title: "サイコパステスト", tag: "サイト", year:"2026", url: "https://yomitanakane.com/Psycopath-test/", img:"images/Psycopath.png"},
+  { title: "サイコパステスト", tag: "サイト", year:"2026", url: "https://yomitanakane.com/Psychopath-test/", img:"images/Psychopath.png"},
   { title: "ヲチニュ / 重音テト", tag: "楽曲", year:"2026", url: "https://www.youtube.com/watch?v=JoWEhQTC5jw", img:"images/WATCHNEW.jpg"},
   { title: "NIGHT HIKE幕張", tag: "出演", year:"2026", url: "https://tribalcon.zaiko.io/ja/e/night-hike-2026-makuhari", img:"images/NIGHTHIKE_Makuhari.png",
   	detail:{detail:"VIDEO GACHA"}},
