@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L15';
+  const VERSION = 'L16';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -308,6 +308,11 @@
   const A_MAX = 0.4, A_MIN = 0.07, GAMMA = 2;
   // 単語の多いタグ（FAINT_FROM 語以上）の線はさらに薄く
   const FAINT_FROM = 15, FAINT_SCALE = 0.5;
+  /*
+   * 遠い単語を結ぶ線は薄く：両端の距離が FADE_FROM px を超えると、濃さに (FADE_FROM / 距離)^FADE_POW を掛ける（最低 A_FLOOR）。
+   * ただし KEEP_MAX 語までのタグの線と、単語本体とそのタグの単語を結ぶ線は、離れていても薄くしない
+   */
+  const FADE_FROM = 400, FADE_POW = 1.5, A_FLOOR = 0.01, KEEP_MAX = 4;
   function alphaScale(groups) {
     const sizes = groups.map((g) => g.length).filter((m) => m > 1);
     const lo = Math.log(Math.min(...sizes, 2)), hi = Math.log(Math.max(...sizes, 2));
@@ -741,6 +746,12 @@
     for (const e of edges) {
       e.pts = clear(xs[e.i], ys[e.i], xs[e.j], ys[e.j], e) ? [[xs[e.i], ys[e.i]], [xs[e.j], ys[e.j]]] : route(e);
     }
+    // 遠い単語を結ぶ線を薄く（少ない語数のタグの線・単語本体との線はそのまま）
+    for (const e of edges) {
+      if (e.direct || e.tags.some((t) => groups[t].length <= KEEP_MAX)) continue;
+      const d = Math.hypot(xs[e.i] - xs[e.j], ys[e.i] - ys[e.j]);
+      if (d > FADE_FROM) e.a = Math.max(A_FLOOR, e.a * Math.pow(FADE_FROM / d, FADE_POW));
+    }
     return edges;
   }
 
@@ -795,7 +806,8 @@
       tags,
       // 線：[濃さ, [タグ番号…], 点列, （単語本体と直接結ぶ線なら 1）]
       edges: edges.map((e) => {
-        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.8).flatMap((p) => [r1(p[0]), r1(p[1])])];
+        // 濃さは有効数字2桁ほどに丸める（薄い線も 0 にならないように）
+        const row = [e.a >= 0.1 ? Math.round(e.a * 100) / 100 : Math.round(e.a * 1000) / 1000, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.8).flatMap((p) => [r1(p[0]), r1(p[1])])];
         if (e.direct) row.push(1);
         return row;
       }),
