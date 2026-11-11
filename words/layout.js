@@ -8,7 +8,7 @@
   const K = root.Kana || (typeof require === 'function' ? require('./kana.js') : null);
 
   // 計算方法を変えたら上げる（保存済みの layout.json を使わなくなる）
-  const VERSION = 'L14';
+  const VERSION = 'L15';
 
   /* ================= 単語とタグのつながり ================= */
 
@@ -93,152 +93,166 @@
 
   /* ================= 配置 ================= */
 
-  function mulberry32(a) {
-    return () => {
-      a |= 0; a = (a + 0x6d2b79f5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
   // 単語同士の最低限の余白（左右・上下それぞれ片側ぶん）
   const SPACE_X = 30, SPACE_Y = 24;
-  // 単語の枠の面積の合計が、配置する円の面積に占める割合（小さいほどゆったり。単語数によらず一定）
-  const OCCUPANCY = 0.1;
   // 線をよけるために単語をずらす最大距離
   const MOVE_MAX = 300;
   const cellKey = (gx, gy) => (gx + 50000) * 100000 + (gy + 50000);
+
   /*
-   * タグの結びつきの強さ。単語の少ないタグほど強い（2語・3〜4語のタグは特に強く、5語からは弱まっていく）。
-   * 少ないタグ同士でつながった単語ほど近くに集まる。
+   * 単語どうしの結びつきの重み（同じ組が複数のタグでつながっていれば足し合わせる）
+   * - 単語そのものがタグ名になっている時の、単語本体とそのタグの単語：一番強い
+   * - 2語のタグ・3〜4語のタグ：強い
+   * - 5語以上でも、ほかの単語との結びつきが少ない閉じた語群（「あやとり」など。compute の TIGHT_*）：強め
+   * - 5〜9語のタグ：弱い
+   * - BIG 語以上のタグ：ごく弱い（並べ方にはほとんど影響しないが、置き場所が同じくらいなら近くを選ぶ）
    */
-  const strength = (m) => (m <= 2 ? 1.5 : m <= 4 ? 1.1 : 1 / Math.max(1, m - 3));
-
-  // 単語そのものがタグ名になっている時、そのタグの単語を単語本体（中心の単語）へ引き寄せる強さ
-  const HUB_PULL = 0.5;
+  const W_HUB = 6;
+  const BIG = 10;
+  const weightOf = (m, tight) => (m === 2 ? 2 : m <= 4 ? 1.4 : tight ? 1.1 : m < BIG ? 2 / m : 0.6 / m);
+  // この重み以上の組は「近くに置く組」。ほかの単語より詰めて置ける
+  const NEAR_W = 1;
+  // 近くに置く組ではない単語どうしは、最低限の余白（SPACE_X / SPACE_Y）にこれだけ足して離す。
+  // 単語が増えると円が大きくなり、密度はほぼ一定（単語の枠の面積が円の約 1 割）に保たれる
+  const FAR_X = 30, FAR_Y = 24;
+  // この語数までのタグは、1語を置いたらほかの単語もすぐ続けて置く
+  const OPEN_MAX = 4;
+  // 2語のタグの相手を引き寄せる時にあける距離（px）
+  const PAIR_GAP = 40;
 
   /*
-   * タグを共有する単語が近くに集まるよう配置（データが同じなら毎回同じ配置）
+   * 結びつきの強い単語が隣り合うよう、中心から1語ずつ置いていく（データが同じなら毎回同じ配置）
+   * 1. すでに置いた単語と強く結びつく単語のうち、結びつきの合計が一番大きい単語を次に選び、
+   *    結びつく単語たちの近く（強い結びつきほど重く見た平均の位置）の、一番近い空いている所に置く。
+   *    4語までのタグ・閉じた語群・単語本体のタグは、1語を置いたらほかの単語もすぐ続けて置く
+   * 2. 強く結びつく単語が無くなったら、残りのうち強い結びつきの一番多い単語から次のまとまりを始める
+   *    （弱い結びつきの単語の近く。それも無ければ、いま埋まっている円の縁）
+   * 3. 単語本体のタグの単語と、2語のタグの相手を、もう一度すぐ近くへ寄せる
    * hubs[gi]: そのタグと同じ名前の単語（無ければ空）
-   * tight[gi]: 閉じた語群か（単語同士の結びつきが濃く、ほかの単語との結びつきが少ないタグ。compute の TIGHT_*）
+   * tight[gi]: 閉じた語群か
    */
-  // 2語のタグの相手を置く時にあける距離（px）
-  const PAIR_GAP = 100;
   function place(nodes, groups, hubs, tight) {
     const n = nodes.length;
     const xs = new Float64Array(n), ys = new Float64Array(n);
-    if (!n) return { xs, ys };
-    const rnd = mulberry32(hashStr(nodes.map((d) => d.id).join('\u0001')));
-    // 閉じた語群は、単語の少ないタグと同じくらい強く引き寄せる
-    const gs = groups.map((g, gi) => (tight[gi] ? Math.max(strength(g.length), strength(2)) : strength(g.length)));
-
+    if (!n) return { xs, ys, center: -1 };
     // 半幅・半高（枠同士の最低限の余白を含む）
     const hw = new Float64Array(n), hh = new Float64Array(n);
-    let area = 0;
-    nodes.forEach((d, i) => { hw[i] = d.bw / 2 + SPACE_X; hh[i] = d.bh / 2 + SPACE_Y; area += (hw[i] * 2 + 40) * (hh[i] * 2 + 40); });
-    const R = Math.sqrt(area / Math.PI) * 1.2;
-    const disc = (r) => { const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r; return [Math.cos(a) * d, Math.sin(a) * d]; };
-    // 最初の位置：属するタグの中心の、結びつきの強さで重み付けした平均
-    const centers = groups.map(() => disc(R));
-    const acc = new Float64Array(n * 3);
-    groups.forEach((g, gi) => g.forEach((i) => {
-      acc[i * 3] += centers[gi][0] * gs[gi]; acc[i * 3 + 1] += centers[gi][1] * gs[gi]; acc[i * 3 + 2] += gs[gi];
-    }));
-    for (let i = 0; i < n; i++) {
-      const c = acc[i * 3 + 2];
-      if (c) { const j = disc(R * 0.3); xs[i] = acc[i * 3] / c + j[0]; ys[i] = acc[i * 3 + 1] / c + j[1]; }
-      else { const p = disc(R); xs[i] = p[0]; ys[i] = p[1]; }
-    }
-    // 各タグの単語が収まる半径の外側にいる時だけ引き寄せる。少ないタグほど強く、小さくまとめる
-    // （特に強いタグは半径 0 ＝常に中心へ引き寄せる。重なりは後の配置で解消される）
-    const GAP = 44;
-    const areaOf = (i) => (hw[i] * 2 + GAP) * (hh[i] * 2 + GAP);
-    const gr = groups.map((g, gi) => Math.sqrt(g.reduce((s, i) => s + areaOf(i), 0) / Math.PI) * Math.max(0, 0.4 + 1.1 * (1 - gs[gi])));
-    const pull = gs.map((s) => 1.2 * s);
-    let total = 0;
-    for (let i = 0; i < n; i++) total += areaOf(i);
-    const R0 = Math.sqrt(total / Math.PI) * 0.8;
+    nodes.forEach((d, i) => { hw[i] = d.bw / 2 + SPACE_X; hh[i] = d.bh / 2 + SPACE_Y; });
 
-    const ITER = n > 1500 ? 140 : 220;
-    const PC = 240, PUSH = 200;
-    const dens = new Map();
-    const dx = new Float64Array(n), dy = new Float64Array(n);
-    for (let it = 0; it < ITER; it++) {
-      const temp = 1 - it / ITER;
-      dx.fill(0); dy.fill(0);
-      groups.forEach((g, gi) => {
-        let cx = 0, cy = 0;
-        for (const i of g) { cx += xs[i]; cy += ys[i]; }
-        cx /= g.length; cy /= g.length;
-        const r = gr[gi], k = pull[gi];
-        for (const i of g) {
-          const ddx = cx - xs[i], ddy = cy - ys[i], d = Math.hypot(ddx, ddy);
-          if (d > r) { const f = (k * (d - r)) / d; dx[i] += ddx * f; dy[i] += ddy * f; }
-        }
-        // 単語そのものがタグになっている場合は、そのタグの単語を単語本体のすぐ近くへ
-        for (const h of hubs[gi]) {
-          for (const i of g) {
-            if (i === h) continue;
-            const ddx = xs[h] - xs[i], ddy = ys[h] - ys[i];
-            dx[i] += ddx * HUB_PULL; dy[i] += ddy * HUB_PULL;
-          }
-        }
-      });
-      // 混み合っている所から空いている所へ押し出す（密度の勾配）
-      dens.clear();
-      for (let i = 0; i < n; i++) {
-        const key = cellKey(Math.floor(xs[i] / PC), Math.floor(ys[i] / PC));
-        dens.set(key, (dens.get(key) || 0) + areaOf(i));
-      }
-      const pr = (gx, gy) => Math.max(0, (dens.get(cellKey(gx, gy)) || 0) / (PC * PC) - 0.7);
-      for (let i = 0; i < n; i++) {
-        const fx = xs[i] / PC - 0.5, fy = ys[i] / PC - 0.5;
-        const gx = Math.floor(fx), gy = Math.floor(fy), tx = fx - gx, ty = fy - gy;
-        // 周囲4セルの圧力を双線形補間した勾配
-        const p00 = pr(gx, gy), p10 = pr(gx + 1, gy), p01 = pr(gx, gy + 1), p11 = pr(gx + 1, gy + 1);
-        dx[i] -= ((p10 - p00) * (1 - ty) + (p11 - p01) * ty) * PUSH;
-        dy[i] -= ((p01 - p00) * (1 - tx) + (p11 - p10) * tx) * PUSH;
-      }
-      const maxStep = 40 * temp + 3;
-      for (let i = 0; i < n; i++) {
-        const d = Math.hypot(xs[i], ys[i]);
-        if (d > R0) { const f = (0.05 * (d - R0)) / d; dx[i] -= xs[i] * f; dy[i] -= ys[i] * f; }
-        const l = Math.hypot(dx[i], dy[i]);
-        const s = l > maxStep ? maxStep / l : 1;
-        xs[i] += dx[i] * s; ys[i] += dy[i] * s;
-      }
+    // 単語の組の重み
+    const wmap = new Map();
+    const keyOf = (i, j) => (i < j ? i * n + j : j * n + i);
+    const addW = (i, j, w) => { if (i !== j) { const k = keyOf(i, j); wmap.set(k, (wmap.get(k) || 0) + w); } };
+    groups.forEach((g, gi) => {
+      for (const h of hubs[gi]) for (const i of g) addW(h, i, W_HUB);
+      const w = weightOf(g.length, tight[gi]);
+      for (let a = 0; a < g.length; a++) for (let b = a + 1; b < g.length; b++) addW(g[a], g[b], w);
+    });
+    const nb = Array.from({ length: n }, () => []); // [相手, 重み, 相手, 重み, …]
+    const strongTotal = new Float64Array(n);
+    for (const [k, w] of wmap) {
+      const i = Math.floor(k / n), j = k % n;
+      nb[i].push(j, w); nb[j].push(i, w);
+      if (w >= NEAR_W) { strongTotal[i] += w; strongTotal[j] += w; }
     }
+    const near = (i, j) => (wmap.get(keyOf(i, j)) || 0) >= NEAR_W;
 
-    // 単語が増えても密度が変わらないよう、中心からの距離を「単語1つあたりの面積が一定」の円盤に並べ直す
-    // （中心から見た方向と、中心からの近さの順番はそのまま）
-    {
-      let cx = 0, cy = 0, box = 0;
-      for (let i = 0; i < n; i++) { cx += xs[i]; cy += ys[i]; box += nodes[i].bw * nodes[i].bh; }
-      cx /= n; cy /= n; box /= n;
-      const Rd = Math.sqrt((n * box) / OCCUPANCY / Math.PI);
-      const byDist = Array.from({ length: n }, (_, i) => i)
-        .sort((p, q) => Math.hypot(xs[p] - cx, ys[p] - cy) - Math.hypot(xs[q] - cx, ys[q] - cy));
-      byDist.forEach((i, k) => {
-        const a = Math.atan2(ys[i] - cy, xs[i] - cx), r = Rd * Math.sqrt((k + 0.5) / n);
-        xs[i] = Math.cos(a) * r; ys[i] = Math.sin(a) * r;
-      });
-    }
-
-    // 中心に近い順に、元の位置から最も近い「重ならない場所」へ置いていく
-    const order = Array.from({ length: n }, (_, i) => i).sort((p, q) => xs[p] ** 2 + ys[p] ** 2 - (xs[q] ** 2 + ys[q] ** 2));
-    const CS = 120;
+    // 置いた単語の格子（重なりの確認用）
+    const CS = 160;
     const placed = new Map();
+    const done = new Uint8Array(n);
     const cellsOf = (i, x, y, fn) => {
-      const x0 = Math.floor((x - hw[i]) / CS), x1 = Math.floor((x + hw[i]) / CS);
-      const y0 = Math.floor((y - hh[i]) / CS), y1 = Math.floor((y + hh[i]) / CS);
-      for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) if (fn(cellKey(gx, gy)) === false) return false;
+      const x1 = Math.floor((x + hw[i]) / CS), y1 = Math.floor((y + hh[i]) / CS);
+      for (let gx = Math.floor((x - hw[i]) / CS); gx <= x1; gx++) for (let gy = Math.floor((y - hh[i]) / CS); gy <= y1; gy++) fn(cellKey(gx, gy));
+    };
+    const mark = (i) => cellsOf(i, xs[i], ys[i], (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
+    // (x, y) に i を置けるか。loose: 近くに置く組でない単語とも、最低限の余白だけあればよい
+    const free = (i, x, y, loose) => {
+      const fx = loose ? 0 : FAR_X * 2, fy = loose ? 0 : FAR_Y * 2;
+      const x0 = Math.floor((x - hw[i] - fx) / CS), x1 = Math.floor((x + hw[i] + fx) / CS);
+      const y0 = Math.floor((y - hh[i] - fy) / CS), y1 = Math.floor((y + hh[i] + fy) / CS);
+      for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+        const c = placed.get(cellKey(gx, gy));
+        if (c) for (const j of c) {
+          const ddx = Math.abs(x - xs[j]), ddy = Math.abs(y - ys[j]);
+          if (ddx >= hw[i] + hw[j] + fx || ddy >= hh[i] + hh[j] + fy) continue;
+          if (loose || (ddx < hw[i] + hw[j] && ddy < hh[i] + hh[j]) || !near(i, j)) return false;
+        }
+      }
       return true;
     };
-    const free = (i, x, y) => cellsOf(i, x, y, (key) => {
-      const c = placed.get(key);
-      if (c) for (const j of c) if (Math.abs(x - xs[j]) < hw[i] + hw[j] && Math.abs(y - ys[j]) < hh[i] + hh[j]) return false;
-    });
-    // 単語そのものがタグになっている場合、そのタグの単語は、単語本体を置いた直後にそのすぐ周りへ置く
+    // 目標の位置から一番近い空いている所（同じ距離なら from の向きを先に）
+    function spot(i, tx, ty, from, loose) {
+      if (free(i, tx, ty, loose)) return [tx, ty];
+      for (let r = 6; r < 40000; r += 6 + r * 0.03) {
+        const k = Math.min(64, Math.max(8, Math.ceil((2 * Math.PI * r) / 10)));
+        for (let s = 0; s < k; s++) {
+          const a = from + (s & 1 ? -1 : 1) * Math.ceil(s / 2) * ((Math.PI * 2) / k);
+          const x = tx + Math.cos(a) * r, y = ty + Math.sin(a) * r;
+          if (free(i, x, y, loose)) return [x, y];
+        }
+      }
+      return [tx, ty];
+    }
+
+    // 1. 2. 中心から1語ずつ置く
+    // att: すでに置いた単語との結びつきの合計（attS は強い結びつきだけ）
+    // sx, sy, sw: 結びつく単語の位置の、重みの2乗で重み付けした合計（次に置く目標の位置）
+    const att = new Float64Array(n), attS = new Float64Array(n), sx = new Float64Array(n), sy = new Float64Array(n), sw = new Float64Array(n);
+    const since = new Float64Array(n); // 初めて強く結びついた順（同じ強さなら早い方を先に）
+    let clock = 0, area = 0, seeds = 0;
+    const GOLD = Math.PI * (3 - Math.sqrt(5));
+    const groupsOf = Array.from({ length: n }, () => []);
+    groups.forEach((g, gi) => { for (const i of g) groupsOf[i].push(gi); });
+    // すぐ続けて置く単語（1語を置いたら、その単語の少ない語数のタグ・閉じた語群・単語本体のタグの単語）
+    const queue = [], queued = new Uint8Array(n), viaQueue = new Uint8Array(n);
+    let qh = 0;
+    function settle(i, x, y) {
+      xs[i] = x; ys[i] = y; done[i] = 1; mark(i);
+      area += (hw[i] + FAR_X) * 2 * (hh[i] + FAR_Y) * 2;
+      const a = nb[i];
+      for (let k = 0; k < a.length; k += 2) {
+        const j = a[k], w = a[k + 1];
+        if (done[j]) continue;
+        if (w >= NEAR_W) { if (!attS[j]) since[j] = ++clock; attS[j] += w; }
+        att[j] += w; sx[j] += x * w * w; sy[j] += y * w * w; sw[j] += w * w;
+      }
+      // 続けて置いた単語からは、閉じた語群・単語本体のタグだけを広げる（小さなタグの連鎖で遠くまで続けない）
+      for (const gi of groupsOf[i]) {
+        const g = groups[gi], strong = tight[gi] || hubs[gi].includes(i);
+        if (!(strong || (g.length <= OPEN_MAX && !viaQueue[i]))) continue;
+        for (const j of g) if (!done[j] && !queued[j]) { queued[j] = 1; queue.push(j); }
+      }
+    }
+    // 最初の単語：強い結びつきの合計が一番大きい単語を中央に
+    let first = 0;
+    for (let i = 1; i < n; i++) if (strongTotal[i] > strongTotal[first]) first = i;
+    settle(first, 0, 0);
+    for (let k = 1; k < n; k++) {
+      let u = -1;
+      while (qh < queue.length && done[queue[qh]]) qh++;
+      if (qh < queue.length) { u = queue[qh++]; viaQueue[u] = 1; }
+      if (u < 0) {
+        for (let i = 0; i < n; i++) {
+          if (done[i] || !attS[i]) continue;
+          if (u < 0 || att[i] > att[u] + 1e-9 || (Math.abs(att[i] - att[u]) <= 1e-9 && since[i] < since[u])) u = i;
+        }
+      }
+      let tx, ty;
+      if (u < 0) {
+        // 次のまとまり：強い結びつきの一番多い単語から
+        for (let i = 0; i < n; i++) {
+          if (done[i]) continue;
+          if (u < 0 || strongTotal[i] > strongTotal[u] + 1e-9 || (Math.abs(strongTotal[i] - strongTotal[u]) <= 1e-9 && att[i] > att[u] + 1e-9)) u = i;
+        }
+        if (sw[u] > 0) { tx = sx[u] / sw[u]; ty = sy[u] / sw[u]; }
+        else { const r = Math.sqrt(area / Math.PI) * 0.85, a = ++seeds * GOLD; tx = Math.cos(a) * r; ty = Math.sin(a) * r; }
+      } else { tx = sx[u] / sw[u]; ty = sy[u] / sw[u]; }
+      const [x, y] = spot(u, tx, ty, Math.atan2(ty, tx), false);
+      settle(u, x, y);
+    }
+
+    // 3. 単語本体のタグの単語と、2語のタグの相手を、もう一度すぐ近くへ寄せる（中心に近い単語から順に置き直す）
     // （複数の単語本体に属する時は、単語の少ないタグの単語本体を優先）
     const hubOf = new Int32Array(n).fill(-1), hubSize = new Float64Array(n).fill(Infinity);
     groups.forEach((g, gi) => {
@@ -246,63 +260,42 @@
     });
     const members = Array.from({ length: n }, () => []);
     for (let i = 0; i < n; i++) if (hubOf[i] >= 0) members[hubOf[i]].push(i);
-    // 閉じた語群は、最初に置いた単語のすぐ周りに残りの単語を置く（複数に属する時は単語の少ない語群を優先）
-    const clusterOf = new Int32Array(n).fill(-1);
-    groups.forEach((g, gi) => {
-      if (!tight[gi]) return;
-      for (const i of g) if (clusterOf[i] < 0 || g.length < groups[clusterOf[i]].length) clusterOf[i] = gi;
-    });
-    const opened = new Uint8Array(groups.length);
-    const done = new Uint8Array(n);
-    const going = new Uint8Array(n); // 本体を先に置こうとしている途中の単語（相互に本体の時の無限ループよけ）
-    // 2語のタグで結ばれた相手（一番強い結びつき）
     const pairOf = Array.from({ length: n }, () => []);
     for (const g of groups) if (g.length === 2) { pairOf[g[0]].push(g[1]); pairOf[g[1]].push(g[0]); }
-    // withPairs: 置いた単語の、2語のタグの相手もすぐ近くに置くか（相手からさらには広げない）
-    // gap: 最低限あける距離（px）
-    function put(i, tx, ty, withPairs = true, gap = 0) {
+    const tx0 = Float64Array.from(xs), ty0 = Float64Array.from(ys);
+    placed.clear();
+    done.fill(0);
+    const going = new Uint8Array(n); // 単語本体を先に置こうとしている途中の単語（相互に本体の時の無限ループよけ）
+    function put(i, tx, ty, withPairs) {
       if (done[i]) return;
-      // 単語本体（タグになっている単語）がまだ置かれていなければ、先に本体を置き、その周りに i を置く
-      // （2語のタグの相手として先に呼ばれた時も、本体から引き離されないように）
       const h0 = hubOf[i];
       if (h0 >= 0 && !done[h0] && !going[h0]) {
-        going[i] = 1;
-        put(h0, tx, ty, withPairs, gap);
-        going[i] = 0;
+        going[i] = 1; put(h0, tx0[h0], ty0[h0], withPairs); going[i] = 0;
         if (done[i]) return;
       }
       done[i] = 1;
-      let px = tx, py = ty;
-      if (gap > 0 || !free(i, tx, ty)) {
-        search: for (let r = Math.max(8, gap); r < 20000; r += 8 + r * 0.04) {
-          const k = Math.min(48, Math.max(8, Math.ceil((2 * Math.PI * r) / 10)));
-          const a0 = rnd() * Math.PI * 2;
-          for (let s = 0; s < k; s++) {
-            const a = a0 + (s / k) * Math.PI * 2;
-            const x = tx + Math.cos(a) * r, y = ty + Math.sin(a) * r;
-            if (free(i, x, y)) { px = x; py = y; break search; }
-          }
-        }
+      [xs[i], ys[i]] = spot(i, tx, ty, Math.atan2(ty0[i] - ty, tx0[i] - tx), true);
+      mark(i);
+      // 寄せる時は、元の位置の向きに、枠が接するくらいまで
+      for (const j of members[i]) {
+        const d = Math.hypot(tx0[j] - xs[i], ty0[j] - ys[i]) || 1, f = Math.min(1, (hh[i] + hh[j]) / d);
+        put(j, xs[i] + (tx0[j] - xs[i]) * f, ys[i] + (ty0[j] - ys[i]) * f, true);
       }
-      xs[i] = px; ys[i] = py;
-      cellsOf(i, px, py, (key) => { let c = placed.get(key); if (!c) placed.set(key, (c = [])); c.push(i); });
-      for (const j of members[i]) put(j, px, py);
-      const c = clusterOf[i];
-      if (c >= 0 && !opened[c]) {
-        opened[c] = 1;
-        for (const j of groups[c]) if (clusterOf[j] === c) put(j, px, py);
+      if (withPairs) for (const j of pairOf[i]) {
+        if (done[j]) continue;
+        const d = Math.hypot(tx0[j] - xs[i], ty0[j] - ys[i]) || 1, lim = hh[i] + hh[j] + PAIR_GAP;
+        put(j, d > lim ? xs[i] + (tx0[j] - xs[i]) * (lim / d) : tx0[j], d > lim ? ys[i] + (ty0[j] - ys[i]) * (lim / d) : ty0[j], false);
       }
-      // 単語本体の周りなど別の所に寄せられても、2語のタグの相手とは離れすぎないように
-      if (withPairs) for (const j of pairOf[i]) put(j, px, py, false, PAIR_GAP);
     }
-    // 円の中央（原点）に一番近い単語を、ちょうど中央に置く（その後の線よけでも動かさない）
-    const center = order[0];
-    put(center, 0, 0);
-    for (const i of order) {
-      const h = hubOf[i];
-      if (h >= 0) put(h, xs[h], ys[h]); // 単語本体を先に置く（その周りに i も置かれる）
-      put(i, xs[i], ys[i]);
-    }
+    for (const i of Array.from({ length: n }, (_, i) => i).sort((p, q) => tx0[p] ** 2 + ty0[p] ** 2 - (tx0[q] ** 2 + ty0[q] ** 2))) put(i, tx0[i], ty0[i], true);
+
+    // 全体の中心に一番近い単語を、ちょうど中央（原点）に
+    let cx = 0, cy = 0, center = 0, bd = Infinity;
+    for (let i = 0; i < n; i++) { cx += xs[i]; cy += ys[i]; }
+    cx /= n; cy /= n;
+    for (let i = 0; i < n; i++) { const d = (xs[i] - cx) ** 2 + (ys[i] - cy) ** 2; if (d < bd) { bd = d; center = i; } }
+    const ox = xs[center], oy = ys[center];
+    for (let i = 0; i < n; i++) { xs[i] -= ox; ys[i] -= oy; }
     return { xs, ys, center };
   }
 
@@ -523,63 +516,6 @@
 
     // 3. 残った線は、単語に掛からない道筋を探して曲げる
     const clear = (x1, y1, x2, y2, e) => !hits(x1, y1, x2, y2, e.i, e.j, 1);
-    function oneBend(e, ax, ay, bx, by) {
-      const len = Math.hypot(bx - ax, by - ay) || 1;
-      const nx = -(by - ay) / len, ny = (bx - ax) / len;
-      for (let d = 24; d < Math.max(300, len * 0.7); d += 24) {
-        for (const f of [0.5, 0.35, 0.65, 0.2, 0.8]) {
-          for (const sgn of [1, -1]) {
-            const px = ax + (bx - ax) * f + nx * d * sgn, py = ay + (by - ay) * f + ny * d * sgn;
-            if (clear(ax, ay, px, py, e) && clear(px, py, bx, by, e)) return [[px, py]];
-          }
-        }
-      }
-      return null;
-    }
-    // 周囲の単語の角を経由点にした最短経路
-    function aroundBoxes(e, ax, ay, bx, by, off = 4, limit = 16) {
-      const pad = 200;
-      const l = Math.min(ax, bx) - pad, r = Math.max(ax, bx) + pad, t = Math.min(ay, by) - pad, btm = Math.max(ay, by) + pad;
-      const obs = new Set();
-      for (let gx = Math.floor(l / GC); gx <= Math.floor(r / GC); gx++)
-        for (let gy = Math.floor(t / GC); gy <= Math.floor(btm / GC); gy++) {
-          const s = boxG.get(cellKey(gx, gy));
-          if (s) for (const o of s) if (o !== e.i && o !== e.j) obs.add(o);
-        }
-      const len = Math.hypot(bx - ax, by - ay) || 1;
-      const distTo = (o) => Math.abs((bx - ax) * (ay - ys[o]) - (ax - xs[o]) * (by - ay)) / len;
-      const near = [...obs].sort((p, q) => distTo(p) - distTo(q) || p - q).slice(0, limit);
-      const inside = (x, y) => {
-        let found = false;
-        boxCells(e.i, x, y, (key) => {
-          const s = boxG.get(key);
-          if (s) for (const o of s) if (Math.abs(x - xs[o]) <= LW[o] && Math.abs(y - ys[o]) <= LH[o]) { found = true; return false; }
-        });
-        return found;
-      };
-      const pts = [[ax, ay], [bx, by]];
-      for (const o of near) for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-        const x = xs[o] + sx * (LW[o] + off), y = ys[o] + sy * (LH[o] + off);
-        if (!inside(x, y)) pts.push([x, y]);
-      }
-      const m = pts.length, dist = new Float64Array(m).fill(Infinity), prev = new Int32Array(m).fill(-1), done = new Uint8Array(m);
-      dist[0] = 0;
-      for (;;) {
-        let u = -1;
-        for (let i = 0; i < m; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
-        if (u < 0 || u === 1) break;
-        done[u] = 1;
-        for (let v = 0; v < m; v++) {
-          if (done[v]) continue;
-          const d = dist[u] + Math.hypot(pts[v][0] - pts[u][0], pts[v][1] - pts[u][1]);
-          if (d < dist[v] && clear(pts[u][0], pts[u][1], pts[v][0], pts[v][1], e)) { dist[v] = d; prev[v] = u; }
-        }
-      }
-      if (prev[1] < 0) return null;
-      const path = [];
-      for (let v = prev[1]; v > 0; v = prev[v]) path.unshift(pts[v]);
-      return path;
-    }
     // 点列が単語に掛からないか
     const pathClear = (pts, e) => {
       for (let k = 1; k < pts.length; k++) if (!clear(pts[k - 1][0], pts[k - 1][1], pts[k][0], pts[k][1], e)) return false;
@@ -638,6 +574,7 @@
       const at = (f, d) => [A[0] + ux * len * f + nx * d, A[1] + uy * len * f + ny * d];
       for (const k of [0.12, 0.2, 0.3, 0.42, 0.56, 0.75, 1]) {
         const d = Math.max(24, k * len);
+        if (d > ARC_MAX) break; // 大きくふくらむ弧は使わない（格子の上で道を探す）
         for (const sg of [1, -1]) {
           // 対称な弧と、片側に寄った弧
           for (const [f1, f2, r1, r2] of [[1 / 3, 2 / 3, 1, 1], [0.25, 0.75, 1, 0.4], [0.25, 0.75, 0.4, 1]]) {
@@ -648,41 +585,157 @@
       // ゆるやかな S 字
       for (const k of [0.2, 0.35]) {
         const d = Math.max(24, k * len);
+        if (d > ARC_MAX) break;
         for (const sg of [1, -1]) yield sampleBezier(A, at(1 / 3, d * sg), at(2 / 3, -d * sg), B);
       }
     }
     const GENTLE = 40; // これより急なカーブは使わない（px）
+    const ARC_MAX = 400; // 弧でふくらませる最大の幅（px）
 
     // 単語に掛かる線の道筋を決める
     function route(e) {
       const A = [xs[e.i], ys[e.i]], B = [xs[e.j], ys[e.j]];
       // まずはゆるやかな弧で単語を避ける
       for (const c of arcs(A, B)) if (minRadius(c) >= GENTLE && pathClear(c, e)) return c;
-      // 弧で避けられなければ経由点を通る曲線。なるべくゆるやかなものを選ぶ
-      let poly = null;
-      function* polys() {
-        for (const off of [40, 24]) { const v = aroundBoxes(e, A[0], A[1], B[0], B[1], off); if (v) yield [A, ...v, B]; }
-        const v = oneBend(e, A[0], A[1], B[0], B[1]) || aroundBoxes(e, A[0], A[1], B[0], B[1]) || [];
-        poly = [A, ...v, B];
-        yield poly;
-      }
+      // 弧で避けられなければ、単語から少し離れた道を探し、経由点を通る曲線にする。なるべくゆるやかなものを選ぶ
       let best = null, bestR = -1;
-      for (const p of polys()) {
+      for (const margin of [12, 6]) {
+        const p = gridRoute(e, A, B, margin);
+        if (!p) continue;
         for (const c of [spline(p), rounded(p, 120), rounded(p, 80), rounded(p, 40)]) {
           if (!pathClear(c, e)) continue;
           const r = minRadius(c);
           if (r > bestR) { bestR = r; best = c; }
           if (r >= GENTLE) return best;
         }
+        if (best) return best;
       }
-      if (best) return best;
-      // 見つからない時だけ、周りの単語をより多く考慮して探し直す
-      const wide = aroundBoxes(e, A[0], A[1], B[0], B[1], 4, 48);
-      if (wide) {
-        const p = [A, ...wide, B];
-        for (const c of [spline(p), rounded(p, 40), rounded(p, 20), p]) if (pathClear(c, e)) return c;
+      // 単語の間が狭い所しか通れない時
+      const p = gridRoute(e, A, B, 0);
+      if (p) for (const c of [rounded(p, 20), rounded(p, 10), p]) if (pathClear(c, e)) return c;
+      return p || [A, B];
+    }
+
+    /*
+     * 格子（GR px 四方）の上で、単語（線との間隔＋margin）を通らない最短の道を探し（A*）、
+     * 見通しのきく点を飛ばして経由点を減らす。格子はマップ全体で1つ作り、使い回す。
+     */
+    const GR = 12;
+    let gx0 = Infinity, gy0 = Infinity, gx1 = -Infinity, gy1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      gx0 = Math.min(gx0, xs[i] - LW[i]); gx1 = Math.max(gx1, xs[i] + LW[i]);
+      gy0 = Math.min(gy0, ys[i] - LH[i]); gy1 = Math.max(gy1, ys[i] + LH[i]);
+    }
+    gx0 = Math.floor((gx0 - 800) / GR); gy0 = Math.floor((gy0 - 800) / GR);
+    const GW = Math.ceil((gx1 + 800) / GR) - gx0 + 1, GH = Math.ceil((gy1 + 800) / GR) - gy0 + 1;
+    const blockFor = new Map(); // margin → 単語のある格子（1）
+    function blockGrid(margin) {
+      let b = blockFor.get(margin);
+      if (b) return b;
+      b = new Uint8Array(GW * GH);
+      const m = GR * 0.5 + margin;
+      for (let o = 0; o < n; o++) {
+        const c0 = Math.max(0, Math.ceil((xs[o] - LW[o] - m) / GR) - gx0), c1 = Math.min(GW - 1, Math.floor((xs[o] + LW[o] + m) / GR) - gx0);
+        const r0 = Math.max(0, Math.ceil((ys[o] - LH[o] - m) / GR) - gy0), r1 = Math.min(GH - 1, Math.floor((ys[o] + LH[o] + m) / GR) - gy0);
+        if (c0 <= c1) for (let r = r0; r <= r1; r++) b.fill(1, r * GW + c0, r * GW + c1 + 1);
       }
-      return poly;
+      blockFor.set(margin, b);
+      return b;
+    }
+    const gCost = new Float64Array(GW * GH), gPrev = new Int32Array(GW * GH), gSeen = new Int32Array(GW * GH), gDone = new Int32Array(GW * GH);
+    let gStamp = 0;
+    function gridRoute(e, A, B, margin) {
+      const blk = blockGrid(margin);
+      const m = GR * 0.5 + margin;
+      // 両端の単語の上は通ってよい
+      const own = (cx, cy) => {
+        const x = (cx + gx0) * GR, y = (cy + gy0) * GR;
+        return (Math.abs(x - xs[e.i]) <= LW[e.i] + m && Math.abs(y - ys[e.i]) <= LH[e.i] + m) ||
+          (Math.abs(x - xs[e.j]) <= LW[e.j] + m && Math.abs(y - ys[e.j]) <= LH[e.j] + m);
+      };
+      const isBlocked = (cx, cy) => blk[cy * GW + cx] === 1 && !own(cx, cy);
+      const pad = Math.ceil(600 / GR);
+      const sx = Math.round(A[0] / GR) - gx0, sy = Math.round(A[1] / GR) - gy0, tx = Math.round(B[0] / GR) - gx0, ty = Math.round(B[1] / GR) - gy0;
+      const lx = Math.max(0, Math.min(sx, tx) - pad), hx = Math.min(GW - 1, Math.max(sx, tx) + pad);
+      const ly = Math.max(0, Math.min(sy, ty) - pad), hy = Math.min(GH - 1, Math.max(sy, ty) + pad);
+      const s0 = sy * GW + sx, s1 = ty * GW + tx;
+      const st = ++gStamp;
+      const h = (cx, cy) => { const dx = Math.abs(cx - tx), dy = Math.abs(cy - ty); return (Math.max(dx, dy) + 0.4142 * Math.min(dx, dy)) * 2; }; // 目的地への近さを重く見る（最短でなくてよいので速く）
+      const hf = [], hc = [];
+      const push = (f, c) => {
+        let k = hf.length;
+        hf.push(f); hc.push(c);
+        while (k > 0) { const p = (k - 1) >> 1; if (hf[p] <= f) break; hf[k] = hf[p]; hc[k] = hc[p]; k = p; }
+        hf[k] = f; hc[k] = c;
+      };
+      const pop = () => {
+        const c = hc[0], lf = hf.pop(), lc = hc.pop();
+        const N = hf.length;
+        if (N) {
+          let k = 0;
+          for (;;) {
+            const a = 2 * k + 1, b = a + 1;
+            let m2 = -1, mf = lf;
+            if (a < N && hf[a] < mf) { m2 = a; mf = hf[a]; }
+            if (b < N && hf[b] < mf) { m2 = b; mf = hf[b]; }
+            if (m2 < 0) break;
+            hf[k] = hf[m2]; hc[k] = hc[m2]; k = m2;
+          }
+          hf[k] = lf; hc[k] = lc;
+        }
+        return c;
+      };
+      gSeen[s0] = st; gCost[s0] = 0; gPrev[s0] = -1;
+      push(h(sx, sy), s0);
+      let found = false, count = 0;
+      while (hf.length) {
+        const c = pop();
+        if (gDone[c] === st) continue;
+        if (c === s1) { found = true; break; }
+        gDone[c] = st;
+        if (++count > 400000) break;
+        const cx = c % GW, cy = (c - cx) / GW, gc = gCost[c];
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < lx || ny < ly || nx > hx || ny > hy) continue;
+          const nc = ny * GW + nx;
+          if (gDone[nc] === st) continue;
+          if (nc !== s1 && isBlocked(nx, ny)) continue;
+          // 斜めに進む時は角をかすめない
+          if (dx && dy && (isBlocked(nx, cy) || isBlocked(cx, ny))) continue;
+          const ng = gc + (dx && dy ? 1.4142 : 1);
+          if (gSeen[nc] !== st || ng < gCost[nc]) { gSeen[nc] = st; gCost[nc] = ng; gPrev[nc] = c; push(ng + h(nx, ny), nc); }
+        }
+      }
+      if (!found) return null;
+      const cells = [];
+      for (let c = s1; c >= 0; c = gPrev[c]) { const cx = c % GW; cells.push([(cx + gx0) * GR, ((c - cx) / GW + gy0) * GR]); if (c === s0) break; }
+      cells.reverse();
+      cells[0] = A; cells[cells.length - 1] = B;
+      // 見通しのきく点まで飛ばす（単語から margin 離れたまま）
+      const out = [A];
+      const L = cells.length - 1;
+      // 格子の上で見通せるか（線を半マスずつたどって、単語のある格子に入らないか）
+      const see = (k, j) => {
+        const ax = cells[k][0] / GR - gx0, ay = cells[k][1] / GR - gy0, bx = cells[j][0] / GR - gx0, by = cells[j][1] / GR - gy0;
+        const steps = Math.ceil(Math.hypot(bx - ax, by - ay) * 2);
+        for (let q = 1; q < steps; q++) {
+          const cx = Math.round(ax + ((bx - ax) * q) / steps), cy = Math.round(ay + ((by - ay) * q) / steps);
+          if (isBlocked(cx, cy)) return false;
+        }
+        return true;
+      };
+      for (let k = 0; k < L;) {
+        // 見通せる一番先の点（倍々に伸ばしてから二分探索）
+        let ok = k + 1, step = 2;
+        while (k + step <= L && see(k, k + step)) { ok = k + step; step *= 2; }
+        let ng = Math.min(L + 1, k + step);
+        while (ng - ok > 1) { const mid = (ok + ng) >> 1; if (see(k, mid)) ok = mid; else ng = mid; }
+        out.push(cells[ok]);
+        k = ok;
+      }
+      return out;
     }
 
     for (const e of edges) {
@@ -742,7 +795,7 @@
       tags,
       // 線：[濃さ, [タグ番号…], 点列, （単語本体と直接結ぶ線なら 1）]
       edges: edges.map((e) => {
-        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.4).flatMap((p) => [r1(p[0]), r1(p[1])])];
+        const row = [Math.round(e.a * 100) / 100, e.tags.map((t) => tagIndex[t]), simplify(e.pts, 0.8).flatMap((p) => [r1(p[0]), r1(p[1])])];
         if (e.direct) row.push(1);
         return row;
       }),
