@@ -20,6 +20,26 @@
   var STORAGE_KEY = 'yq_static_solved';
   var IMG_W = 1920, IMG_H = 1080;
 
+  // 解答欄の条件表示(開催時の版と同じ文言)。指定のない問題は「解答を入力」
+  var PLACEHOLDERS = {
+    3: '1文字で入力',
+    4: '数字を入力',
+    5: '連想されるひらがな3文字を入力',
+    21: '漢字2字+ひらがな1字で解答'
+  };
+
+  // 正答率: 検索可能クイズ_集計結果.xlsx「正答率」シート
+  // 正解者数 ÷ 母数(登録者全員・未解答者含む・チームは1 = 872)。小数第2位までの%で表示
+  var RATE_BASE = 872;
+  var CORRECT_COUNTS = {
+    1: 304, 2: 75, 3: 244, 4: 183, 5: 212, 6: 135, 7: 233, 8: 61, 9: 159, 10: 169,
+    11: 36, 12: 83, 13: 124, 14: 68, 15: 181, 16: 79, 17: 21, 18: 195, 19: 268, 20: 67,
+    21: 86, 22: 73, 23: 12, 24: 82, 25: 45
+  };
+  function rateText(q) {
+    return (Math.round(CORRECT_COUNTS[q] / RATE_BASE * 10000) / 100).toFixed(2) + '%';
+  }
+
   // ===== 判定(旧 Apps Script の normalize_ / isCorrect_ と同じ処理) =====
   function normalize(s) {
     s = String(s);
@@ -99,9 +119,10 @@
   function renderMain() {
     var grid = '';
     for (var q = 1; q <= QUESTION_COUNT; q++) {
-      grid += '<button class="tile' + (solved[q] ? ' solved' : '') + '" type="button" aria-label="Q' + q + '">' +
+      grid += '<div class="cell"><button class="tile' + (solved[q] ? ' solved' : '') + '" type="button" aria-label="Q' + q + '">' +
         '<img src="' + qImg(q) + '" alt="Q' + q + '" width="' + IMG_W + '" height="' + IMG_H + '">' +
-        '<span class="shade"><span>正解</span></span></button>';
+        '<span class="shade"><span>正解</span></span></button>' +
+        '<p class="rate">' + rateText(q) + '</p></div>';
     }
     var resultsBtn = RESULTS_URL
       ? '<a class="btn btn-lg" href="' + esc(RESULTS_URL) + '" target="_blank" rel="noopener">結果・解説</a>'
@@ -146,7 +167,7 @@
         '<div class="qpanel" style="--ar:' + (IMG_W / IMG_H).toFixed(4) + '">' +
           '<div class="qbar"><a class="btn btn-sm" data-role="save">画像を保存</a>' +
           '<button class="qclose" type="button" aria-label="閉じる">×</button></div>' +
-          '<img class="qimg" alt="Q' + q + '" width="' + IMG_W + '" height="' + IMG_H + '">' +
+          '<div class="qimgwrap"><img class="qimg" alt="Q' + q + '" width="' + IMG_W + '" height="' + IMG_H + '"></div>' +
           '<div class="answer"></div>' +
         '</div>' +
       '</div>');
@@ -154,12 +175,29 @@
     var save = view.querySelector('[data-role="save"]');
     var answer = view.querySelector('.answer');
 
+    var wrap = view.querySelector('.qimgwrap');
+
+    // 正解画像は「画像を保存」を出さず、右クリック・ドラッグ・長押しでの保存を防ぐ
+    // (画像の上に透明な覆いを重ね、メニューとドラッグを無効化)
     function setImage(isSolved) {
-      var src = isSolved ? aImg(q) : qImg(q);
-      img.src = src;
-      save.href = src;
-      save.setAttribute('download', 'YomitanQ_' + (isSolved ? 'A' : 'Q') + pad2(q) + '.png');
+      if (isSolved) {
+        img.src = aImg(q);
+        save.remove();
+        wrap.classList.add('protected');
+        img.setAttribute('draggable', 'false');
+        if (!wrap.querySelector('.qshield')) {
+          var shield = document.createElement('div');
+          shield.className = 'qshield';
+          wrap.appendChild(shield);
+        }
+      } else {
+        img.src = qImg(q);
+        save.href = img.getAttribute('src');
+        save.setAttribute('download', 'YomitanQ_Q' + pad2(q) + '.png');
+      }
     }
+    wrap.addEventListener('contextmenu', function (e) { if (wrap.classList.contains('protected')) e.preventDefault(); });
+    wrap.addEventListener('dragstart', function (e) { if (wrap.classList.contains('protected')) e.preventDefault(); });
 
     function showResult() {
       var list = ANSWERS[q] || [];
@@ -173,7 +211,7 @@
 
     function showForm() {
       answer.innerHTML = '<form class="row"><input class="input" type="text" maxlength="' + MAX_INPUT +
-        '" autocomplete="off" aria-label="解答" placeholder="解答を入力">' +
+        '" autocomplete="off" aria-label="解答" placeholder="' + esc(PLACEHOLDERS[q] || '解答を入力') + '">' +
         '<button class="btn btn-lg" type="submit">解答</button></form><div class="ansmsg"></div>';
       var form = answer.querySelector('form');
       var input = answer.querySelector('input');

@@ -47,6 +47,8 @@ main{flex:1}
 .btn-sm{font-size:.8rem;padding:2px 10px}
 .input{width:100%;min-width:0;font-size:1.05rem;padding:8px 12px;border:2px solid var(--line);background:#fff}
 .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start;margin-top:28px}
+.cell{min-width:0}
+.rate{margin:1px 0 0;text-align:right;font-size:.62rem;line-height:1.25;color:#0645ad}
 .tile{position:relative;display:block;width:100%;padding:0;border:2px solid var(--soft-line);background:#fff;cursor:pointer}
 .tile:hover,.tile:focus-visible{border-color:var(--line);outline:none}
 .tile img{display:block;width:100%;height:auto}
@@ -86,6 +88,9 @@ main{flex:1}
 .qclose{width:38px;height:38px;font-size:22px;line-height:1;background:#fff;border:2px solid var(--line);cursor:pointer}
 .qclose:hover,.qclose:focus-visible{background:#000;color:#fff}
 .qimg{display:block;width:100%;height:auto;border:1px solid var(--soft-line)}
+.qimgwrap{position:relative}
+.qimgwrap.protected .qimg{pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.qshield{position:absolute;inset:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .answer{margin-top:14px}
 .answer .row{display:flex;gap:10px}
 .ansmsg{margin-top:8px}
