@@ -138,7 +138,8 @@
           '<p class="complete-omake">おまけ問題を10問用意しています。まだまだ遊びたい方は余興にどうぞ。<br>' +
           '<a href="' + OMAKE_URL + '" target="_blank" rel="noopener">' + OMAKE_URL + '</a></p></div>' +
           '<div class="share"><button class="btn" type="button" data-act="share">Xで進捗を共有</button></div>' +
-          '<div class="results">' + resultsBtn + '</div>' +
+          '<div class="results">' + resultsBtn +
+            '<a class="btn btn-lg" href="' + OMAKE_URL + '" target="_blank" rel="noopener">おまけ問題</a></div>' +
         '</main>' +
         '<footer class="credit">制作：<a href="https://yomitanakane.com/" target="_blank" rel="noopener">読谷あかね</a></footer>' +
       '</div>';
