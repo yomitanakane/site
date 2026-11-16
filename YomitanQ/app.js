@@ -1,0 +1,261 @@
+/**
+ * YomitanQ 公開版(静的サイト・サーバー通信なし)
+ * - 参加者登録なし: 開くとすぐ問題一覧を表示
+ * - 正誤判定はブラウザ内で行う(データは answers.js)
+ * - 再解答の待ち時間なし
+ * - 正解した問題は Images/Answer/Axx.png を表示
+ * - 進捗(正解した問題)はこのブラウザの localStorage にのみ保存
+ */
+(function () {
+  'use strict';
+
+  // ===== 設定 =====
+  // 「結果・解説」ボタンのリンク先。空文字のあいだはボタンを押しても何も起きません。
+  var RESULTS_URL = '';
+
+  var QUESTION_COUNT = 25;
+  var MAX_INPUT = 200;
+  var SITE_URL = 'https://yomitanakane.com/YomitanQ';
+  var OMAKE_URL = 'https://yomitanakane.com/YomitanQ/Omake/';
+  var STORAGE_KEY = 'yq_static_solved';
+  var IMG_W = 1920, IMG_H = 1080;
+
+  // ===== 判定(旧 Apps Script の normalize_ / isCorrect_ と同じ処理) =====
+  function normalize(s) {
+    s = String(s);
+    try { s = s.normalize('NFKC'); } catch (e) { /* 正規化非対応時はそのまま */ }
+    return s.toLowerCase().replace(/[\s　]+/g, '');
+  }
+
+  function isCorrect(q, input) {
+    var list = ANSWERS[q] || [];
+    var x = normalize(input);
+    for (var i = 0; i < list.length; i++) if (normalize(list[i]) === x) return true;
+    var parts = CONTAINS[q] || [];
+    if (x.length <= MAX_CONTAINS_INPUT) {
+      for (var j = 0; j < parts.length; j++) if (x.indexOf(normalize(parts[j])) >= 0) return true;
+    }
+    return false;
+  }
+
+  // 旧 cleanText_(単一行): 制御文字を空白にし、前後の空白を除いて200文字まで
+  function cleanInput(v) {
+    return String(v).replace(/[\u0000-\u001F\u007F]/g, ' ').trim().slice(0, MAX_INPUT);
+  }
+
+  // ===== 進捗(このブラウザのみ) =====
+  var solved = loadSolved();
+
+  function loadSolved() {
+    var s = {};
+    try {
+      var arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (Array.isArray(arr)) arr.forEach(function (q) {
+        q = parseInt(q, 10);
+        if (q >= 1 && q <= QUESTION_COUNT) s[q] = true;
+      });
+    } catch (e) { /* 保存領域が使えない場合は空から */ }
+    return s;
+  }
+
+  function saveSolved() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.keys(solved).map(Number))); } catch (e) { /* 無視 */ }
+  }
+
+  function solvedCount() { return Object.keys(solved).length; }
+
+  // ===== 小道具 =====
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function qImg(q) { return 'Images/Question/Q' + pad2(q) + '.png'; }
+  function aImg(q) { return 'Images/Answer/A' + pad2(q) + '.png'; }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function linkify(s) {
+    return esc(s).replace(/https?:\/\/[^\s<]+/g, function (u) {
+      return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + '</a>';
+    });
+  }
+
+  function el(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html.trim();
+    return t.content.firstChild;
+  }
+
+  function updateScroll() {
+    document.body.classList.toggle('noscroll', !!document.querySelector('.qview, .overlay'));
+  }
+
+  // ===== メイン画面 =====
+  var app = document.getElementById('app');
+  var tiles = [];
+  var completeEl;
+
+  function renderMain() {
+    var grid = '';
+    for (var q = 1; q <= QUESTION_COUNT; q++) {
+      grid += '<button class="tile' + (solved[q] ? ' solved' : '') + '" type="button" aria-label="Q' + q + '">' +
+        '<img src="' + qImg(q) + '" alt="Q' + q + '" width="' + IMG_W + '" height="' + IMG_H + '">' +
+        '<span class="shade"><span>正解</span></span></button>';
+    }
+    var resultsBtn = RESULTS_URL
+      ? '<a class="btn btn-lg" href="' + esc(RESULTS_URL) + '" target="_blank" rel="noopener">結果・解説</a>'
+      : '<button class="btn btn-lg" type="button">結果・解説</button>';
+
+    app.innerHTML =
+      '<div class="wrap">' +
+        '<header class="topbar"><div class="brand"><div class="title"><img src="Images/Title.png" alt="YomitanQ" width="1000" height="200"></div></div>' +
+        '<div class="topbtns"><button class="btn" type="button" data-act="rules">ルール</button></div></header>' +
+        '<main>' +
+          '<div class="grid">' + grid + '</div>' +
+          '<div class="complete" hidden><p class="complete-title">全問正解！おめでとうございます！</p>' +
+          '<p class="complete-omake">おまけ問題を10問用意しています。まだまだ遊びたい方は余興にどうぞ。<br>' +
+          '<a href="' + OMAKE_URL + '" target="_blank" rel="noopener">' + OMAKE_URL + '</a></p></div>' +
+          '<div class="share"><button class="btn" type="button" data-act="share">Xで進捗を共有</button></div>' +
+          '<div class="results">' + resultsBtn + '</div>' +
+        '</main>' +
+        '<footer class="credit">制作：<a href="https://yomitanakane.com/" target="_blank" rel="noopener">読谷あかね</a></footer>' +
+      '</div>';
+
+    tiles = Array.prototype.slice.call(app.querySelectorAll('.tile'));
+    tiles.forEach(function (t, i) { t.addEventListener('click', function () { openQuestion(i + 1, t); }); });
+    completeEl = app.querySelector('.complete');
+    app.querySelector('[data-act="rules"]').addEventListener('click', openRules);
+    app.querySelector('[data-act="share"]').addEventListener('click', share);
+    updateComplete();
+  }
+
+  function updateComplete() {
+    completeEl.hidden = solvedCount() < QUESTION_COUNT;
+  }
+
+  function share() {
+    var text = '#YomitanQ で ' + solvedCount() + '/' + QUESTION_COUNT + '問正解した　' + SITE_URL;
+    window.open('https://x.com/intent/post?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  }
+
+  // ===== 問題表示 =====
+  function openQuestion(q, opener) {
+    var view = el(
+      '<div class="qview" role="dialog" aria-modal="true" aria-label="Q' + q + '">' +
+        '<div class="qpanel" style="--ar:' + (IMG_W / IMG_H).toFixed(4) + '">' +
+          '<div class="qbar"><a class="btn btn-sm" data-role="save">画像を保存</a>' +
+          '<button class="qclose" type="button" aria-label="閉じる">×</button></div>' +
+          '<img class="qimg" alt="Q' + q + '" width="' + IMG_W + '" height="' + IMG_H + '">' +
+          '<div class="answer"></div>' +
+        '</div>' +
+      '</div>');
+    var img = view.querySelector('.qimg');
+    var save = view.querySelector('[data-role="save"]');
+    var answer = view.querySelector('.answer');
+
+    function setImage(isSolved) {
+      var src = isSolved ? aImg(q) : qImg(q);
+      img.src = src;
+      save.href = src;
+      save.setAttribute('download', 'YomitanQ_' + (isSolved ? 'A' : 'Q') + pad2(q) + '.png');
+    }
+
+    function showResult() {
+      var list = ANSWERS[q] || [];
+      var supp = SUPPLEMENTS[q] || '';
+      answer.innerHTML = '<div class="result"><p class="ok">正解</p>' +
+        '<p class="main-ans">' + esc(list[0] || '') + '</p>' +
+        (list.length > 1 ? '<p class="alt">' + list.slice(1).map(esc).join(' / ') + '</p>' : '') +
+        (supp ? '<div class="supp">' + linkify(supp) + '</div>' : '') +
+        '</div>';
+    }
+
+    function showForm() {
+      answer.innerHTML = '<form class="row"><input class="input" type="text" maxlength="' + MAX_INPUT +
+        '" autocomplete="off" aria-label="解答" placeholder="解答を入力">' +
+        '<button class="btn btn-lg" type="submit">解答</button></form><div class="ansmsg"></div>';
+      var form = answer.querySelector('form');
+      var input = answer.querySelector('input');
+      var msg = answer.querySelector('.ansmsg');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = cleanInput(input.value);
+        if (!v) return;
+        if (isCorrect(q, v)) {
+          solved[q] = true;
+          saveSolved();
+          tiles[q - 1].classList.add('solved');
+          updateComplete();
+          setImage(true);
+          showResult();
+        } else {
+          // 毎回表示し直して、連続で不正解だったことが分かるようにする
+          msg.innerHTML = '';
+          setTimeout(function () { msg.innerHTML = '<p class="wrong">不正解……</p>'; }, 60);
+          input.select();
+        }
+      });
+    }
+
+    setImage(!!solved[q]);
+    if (solved[q]) showResult(); else showForm();
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      view.remove();
+      updateScroll();
+      if (opener) opener.focus({ preventScroll: true });
+    }
+    function onKey(e) { if (e.key === 'Escape' && !document.querySelector('.overlay')) close(); }
+
+    view.addEventListener('click', function (e) { if (e.target === view) close(); });
+    view.querySelector('.qclose').addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(view);
+    updateScroll();
+  }
+
+  // ===== ルール =====
+  var RULES_HTML =
+    '<p>全25問の検索可能クイズです。</p>' +
+    '<hr class="sep">' +
+    '<p class="bullet">・インターネットや書籍、AIなど、<strong>あらゆる調査手段を認めます。</strong></p>' +
+    '<p class="bullet">・実況・感想などはぜひ <a class="linkbtn" href="https://x.com/intent/post?text=%23YomitanQ%20" target="_blank" rel="noopener noreferrer">#YomitanQ</a> で。</p>' +
+    '<hr class="sep">' +
+    '<p class="bullet">・本サイトでは<strong>随時解答の提出と正誤判定が行えます</strong>。解答は何度送信しても構いません。</p>' +
+    '<p class="bullet">・進捗はブラウザに保存されます。プライベートブラウザでの解答は非推奨です。</p>' +
+    '<p class="bullet">・画像の表示に時間がかかる場合があります。ご了承ください。</p>' +
+    '<hr class="sep">' +
+    '<p class="bullet">・本クイズは全面的に<a class="plain" href="https://note.com/hashtag/SigmaQ" target="_blank" rel="noopener noreferrer">ΣQシリーズ</a>をリスペクトしています。</p>';
+
+  var INTL_HTML =
+    '<details class="intl"><summary>For International Visitors(海外の方へ)</summary><div class="intl-body">' +
+    '<p>いくつかの問題はかなり日本人向けになっており、全てを楽しむのは難しいかもしれません。ごめんなさい！</p>' +
+    '<p>とはいえ一部は海外圏の方でも親しめる問題もあると思います。翻訳などを駆使してチャレンジしていただくのも良いかもしれません。</p>' +
+    '<div class="sp"></div>' +
+    '<p>And to my international audience: Some of the quiz questions are rooted in Japanese culture, so you might find it difficult to enjoy all of them. Sorry about that!</p>' +
+    '<p>That said, I think there are still plenty of questions that international players can enjoy. Feel free to use translation tools and give them a try!</p>' +
+    '</div></details>';
+
+  function openRules() {
+    var opener = document.activeElement;
+    var ov = el('<div class="overlay"><div class="panel" role="dialog" aria-modal="true">' +
+      '<button class="close" type="button" aria-label="閉じる">×</button><h2>ルール</h2>' +
+      '<div>' + RULES_HTML + '</div>' + INTL_HTML + '</div></div>');
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      ov.remove();
+      updateScroll();
+      if (opener && opener.focus) opener.focus({ preventScroll: true });
+    }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+    ov.querySelector('.close').addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+    updateScroll();
+  }
+
+  renderMain();
+})();
