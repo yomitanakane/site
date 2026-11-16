@@ -162,7 +162,7 @@ var SUPPLEMENTS = {
   "19": "Vulfpeckにより配信され削除された、全曲が無音のアルバム。\n再生時間はSpotify上の表示に基づく。\n参考1：https://open.spotify.com/intl-ja/album/25R1pibr1FugNfOM2LhQHT\n参考2：https://ja.wikipedia.org/wiki/Sleepify",
   "20": "絵本『ンビリの王子、旅にでる』に登場するカタカナ大陸の王国の名前を示している。\n参考：https://shop.kumonshuppan.com/view/item/000000003760",
   "21": "茨城県・鹿島神宮の「帯占い」の結果を示している。\n参考：https://www.miyanaka.co.jp/mgblog/index-s.cgi?kiji_cd=00000122",
-  "22": "数学者ヤコブ・ベルヌーイの墓銘碑に記された螺旋と「EADEM MUTATA RESURGO」の文字を表している。\nベルヌーイは対数螺旋を彫るよう依頼したが、職人の誤りによりアルキメデスの螺旋が刻まれた。\n参考：https://en.wikipedia.org/wiki/Eadem_mutata_resurgo#/media/File:Basel_-_Grabstein_Bernoulli.jpg",
+  "22": "数学者ヤコブ・ベルヌーイの墓碑銘に記された螺旋と「EADEM MUTATA RESURGO」の文字を表している。\nベルヌーイは対数螺旋を彫るよう依頼したが、職人の誤りによりアルキメデスの螺旋が刻まれた。\n参考：https://en.wikipedia.org/wiki/Eadem_mutata_resurgo#/media/File:Basel_-_Grabstein_Bernoulli.jpg",
   "23": "かつて存在した韓国のガールズグループ・이달의 소녀の英語表記の由来を示している。\n参考：https://ja.wikipedia.org/wiki/%E4%BB%8A%E6%9C%88%E3%81%AE%E5%B0%91%E5%A5%B3",
   "24": "長野県にある「日本で海岸線から一番遠い地点」の看板で示された4つの海岸を、看板内の座標に基づきGeohashで表示している。\n参考：https://tabinokoborebanashi.com/farfromsea/",
   "25": "2文字：竹田、田男\n3文字：田草月、殷紅色、田蔵田、藤田田、田字草、英田村\n4文字：吉田山田、前田太尊、前田半田、田芋田楽、吉田新田、太田上田、殷殷田田\n5文字：色葉田田田、田能村竹田、田中田士英、大田田根子、田田田博士、山田山田男"
