@@ -60,7 +60,24 @@ main{flex:1}
 .complete-omake{margin:10px 0 0;color:var(--fg);overflow-wrap:anywhere}
 .share{text-align:center;margin-top:48px}
 .results{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:40px}
-.results .btn{min-width:10em;text-align:center}
+.results .btn{min-width:9em;text-align:center}
+.rk{border-top:1px solid var(--line)}
+.rk-row{display:grid;grid-template-columns:4.2em minmax(0,1fr);column-gap:.9em;align-items:baseline;padding:.55em 0;border-bottom:1px solid var(--soft-line)}
+.rk-score{font-weight:700;white-space:nowrap;text-align:left}
+.rk-names{overflow-wrap:anywhere;line-height:1.6}
+.rk-name{white-space:nowrap}
+.rk-sep{color:#8c8c8c}
+.rk-mem{font-size:.72em;margin-left:.1em}
+.rk-l1{padding:.8em 0}
+.rk-l1 .rk-score{font-size:1.5rem;color:var(--red)}
+.rk-l1 .rk-names{font-size:1.3rem;font-weight:700}
+.rk-l2 .rk-score{font-size:1.15rem}
+.rk-l2 .rk-names{font-size:1.08rem;font-weight:700}
+.rk-l3 .rk-score{font-size:.9rem}
+.rk-l3 .rk-names{font-size:.88rem}
+.rk-more{text-align:center;margin:.5em 0 0;line-height:1}
+.rk-more span{display:inline-block;writing-mode:vertical-rl;font-size:1.3rem;font-weight:700}
+.rk-total{margin:.6em 0 0 !important;text-align:right;font-size:.9rem}
 .credit{margin:48px 0 0;padding:0 0 24px;text-align:center;font-size:.85rem}
 .overlay{position:fixed;inset:0;z-index:200;overflow-y:auto;scrollbar-gutter:stable;background:rgba(0,0,0,.5);padding:32px 16px}
 .panel{position:relative;max-width:760px;margin:0 auto;background:#fff;border:2px solid var(--line);padding:32px 36px 28px;font-size:1.02rem}
@@ -111,6 +128,10 @@ main{flex:1}
   .grid{grid-template-columns:1fr;gap:14px}
   .panel{padding:60px 16px 20px}
   .panel h2{padding-right:0}
+  .results{gap:8px}
+  .results .btn{min-width:0;flex:1 1 0;padding:8px 6px}
+  .rk-row{grid-template-columns:3.4em minmax(0,1fr);column-gap:.6em}
+  .rk-name{white-space:normal}
   .overlay{padding:12px 8px}
   .qview{padding:10px 8px 30px}
   .qpanel{--iw:calc(100vw - 52px);padding:8px 10px 14px;width:calc(var(--iw) + 24px)}
@@ -121,6 +142,7 @@ main{flex:1}
 <div id="app" data-nosnippet></div>
 <noscript><p data-nosnippet style="text-align:center;padding:40px 16px">JavaScriptを有効にしてください。</p></noscript>
 <script src="answers.js"></script>
+<script src="results.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

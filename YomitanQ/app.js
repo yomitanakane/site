@@ -10,8 +10,9 @@
   'use strict';
 
   // ===== 設定 =====
-  // 「結果・解説」ボタンのリンク先。空文字のあいだはボタンを押しても何も起きません。
-  var RESULTS_URL = '';
+  // 「解説」ボタンのリンク先。空文字のあいだはボタンを押しても何も起きません。
+  var EXPLANATION_URL = 'https://note.com/yomitanakane/n/ne4a148b28e2e?sub_rt=share_pw';
+  // 「結果」ボタンは results.js の RESULTS(上位成績者)を表示します。
 
   var QUESTION_COUNT = 25;
   var MAX_INPUT = 200;
@@ -124,9 +125,9 @@
         '<span class="shade"><span>正解</span></span></button>' +
         '<p class="rate">' + rateText(q) + '</p></div>';
     }
-    var resultsBtn = RESULTS_URL
-      ? '<a class="btn btn-lg" href="' + esc(RESULTS_URL) + '" target="_blank" rel="noopener">結果・解説</a>'
-      : '<button class="btn btn-lg" type="button">結果・解説</button>';
+    var explanationBtn = EXPLANATION_URL
+      ? '<a class="btn btn-lg" href="' + esc(EXPLANATION_URL) + '" target="_blank" rel="noopener">解説</a>'
+      : '<button class="btn btn-lg" type="button">解説</button>';
 
     app.innerHTML =
       '<div class="wrap">' +
@@ -138,7 +139,7 @@
           '<p class="complete-omake">おまけ問題を10問用意しています。まだまだ遊びたい方は余興にどうぞ。<br>' +
           '<a href="' + OMAKE_URL + '" target="_blank" rel="noopener">' + OMAKE_URL + '</a></p></div>' +
           '<div class="share"><button class="btn" type="button" data-act="share">Xで進捗を共有</button></div>' +
-          '<div class="results">' + resultsBtn +
+          '<div class="results"><button class="btn btn-lg" type="button" data-act="results">結果</button>' + explanationBtn +
             '<a class="btn btn-lg" href="' + OMAKE_URL + '" target="_blank" rel="noopener">おまけ問題</a></div>' +
         '</main>' +
         '<footer class="credit">制作：<a href="https://yomitanakane.com/" target="_blank" rel="noopener">読谷あかね</a></footer>' +
@@ -149,6 +150,7 @@
     completeEl = app.querySelector('.complete');
     app.querySelector('[data-act="rules"]').addEventListener('click', openRules);
     app.querySelector('[data-act="share"]').addEventListener('click', share);
+    app.querySelector('[data-act="results"]').addEventListener('click', openResults);
     updateComplete();
   }
 
@@ -278,10 +280,40 @@
     '</div></details>';
 
   function openRules() {
+    openPanel('ルール', '<div>' + RULES_HTML + '</div>' + INTL_HTML);
+  }
+
+  // ===== 結果(上位成績者) =====
+  // 25点は大きめ、24点・23点は中くらい、それ以外は小さめ。チームメンバーのカッコ書きはさらに小さく
+  function rankLevel(score) {
+    if (score >= 25) return 'rk-l1';
+    if (score >= 23) return 'rk-l2';
+    return 'rk-l3';
+  }
+
+  function resultsHtml() {
+    return '<div class="rk">' + RESULTS.map(function (g) {
+      var names = g.entries.map(function (e) {
+        return '<span class="rk-name">' + esc(e.name) +
+          (e.members ? '<span class="rk-mem">(' + esc(e.members) + ')</span>' : '') + '</span>';
+      }).join('<span class="rk-sep"> / </span>');
+      return '<div class="rk-row ' + rankLevel(g.score) + '"><div class="rk-score">' + g.score + '点</div>' +
+        '<div class="rk-names">' + names + '</div></div>';
+    }).join('') + '</div>' +
+    '<div class="rk-more" aria-hidden="true"><span>…</span></div>' +
+    '<p class="rk-total">' + esc(RESULTS_TOTAL) + '</p>';
+  }
+
+  function openResults() {
+    openPanel('結果', resultsHtml());
+  }
+
+  // ===== ルール・結果の共通パネル =====
+  function openPanel(title, bodyHtml) {
     var opener = document.activeElement;
     var ov = el('<div class="overlay"><div class="panel" role="dialog" aria-modal="true">' +
-      '<button class="close" type="button" aria-label="閉じる">×</button><h2>ルール</h2>' +
-      '<div>' + RULES_HTML + '</div>' + INTL_HTML + '</div></div>');
+      '<button class="close" type="button" aria-label="閉じる">×</button><h2>' + esc(title) + '</h2>' +
+      bodyHtml + '</div></div>');
     function close() {
       document.removeEventListener('keydown', onKey);
       ov.remove();
