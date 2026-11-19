@@ -1,5 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; border-radius: 0; }
 html, body { margin: 0; height: 100%; }
+/* スマホのブラウザが一部の文字だけを勝手に大きくする（文字の自動拡大）のを止める。一覧の長い単語などが極端に大きくなっていた */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: #fff;
   color: #000;
@@ -257,6 +259,19 @@ select.on { background: #000; color: #fff; }
   border: 1px solid #000;
   background: #fff;
   pointer-events: none;
+}
+
+/* ---------- スマホ（縦向き、または横向きで高さの低い画面） ---------- */
+@media (max-width: 600px), (hover: none) and (pointer: coarse) and (max-height: 500px) {
+  /* 検索欄：押している間だけ右（ABOUT・WARP・LIST の上）まで広げ、候補も同じ幅で見やすく。ほかの場所を触ると元の幅に戻る */
+  #search { transition: width .2s ease-out, max-width .2s ease-out; }
+  #search:focus-within { z-index: 11; width: calc(100vw - 32px); max-width: calc(100vw - 32px); }
+  /* 16px 未満だと、iPhone は検索欄を押した時に画面ごと拡大してしまう */
+  #q { font-size: 16px; }
+  .cand { padding: 9px 12px; }
+  .cand span { max-width: 75%; }
+  .cand small { font-size: 12px; }
+  #credit { display: none; }
 }
 
 @media (max-width: 600px) {

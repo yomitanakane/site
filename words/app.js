@@ -318,7 +318,27 @@
   addEventListener('resize', resize);
 
   let flyId = 0;
-  function stopFly() { if (flyId) cancelAnimationFrame(flyId); flyId = 0; }
+  function stopFly() { if (flyId) cancelAnimationFrame(flyId); flyId = 0; stopGlide(); }
+
+  // 指を離した後の慣性（スマホ）：離す直前の速さで滑り出し、だんだん止まる
+  let glideId = 0;
+  function stopGlide() { if (glideId) cancelAnimationFrame(glideId); glideId = 0; }
+  function glide(vx, vy) { // 画面上の速さ（px/ms）
+    stopGlide();
+    if (Math.hypot(vx, vy) < 0.15) return;
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(32, now - last);
+      last = now;
+      cam.x -= vx * dt / cam.z; cam.y -= vy * dt / cam.z;
+      clampPt(cam);
+      paint();
+      const k = Math.pow(0.995, dt); // 1ms ごとに 0.5% ずつ遅くなる
+      vx *= k; vy *= k;
+      glideId = Math.hypot(vx, vy) > 0.02 ? requestAnimationFrame(step) : 0;
+    };
+    glideId = requestAnimationFrame(step);
+  }
   function flyTo(x, y, done, z) {
     stopFly();
     const sz = cam.z, tz = z == null ? sz : Math.min(Z_MAX, Math.max(zMin(), z));
@@ -383,7 +403,8 @@
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     mapEl.setPointerCapture(e.pointerId);
     if (pointers.size === 1) {
-      drag = { sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, node: e.target.closest('.node'), moved: false };
+      drag = { sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, node: e.target.closest('.node'), moved: false,
+        touch: e.pointerType !== 'mouse', track: [{ t: e.timeStamp, x: e.clientX, y: e.clientY }] };
     } else if (pointers.size === 2) {
       const p = pinchInfo();
       pinch = { d: p.d, z: cam.z, wx: cam.x + (p.x - W / 2) / cam.z, wy: cam.y + (p.y - H / 2) / cam.z };
@@ -404,24 +425,32 @@
       return;
     }
     if (!drag) return;
-    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 5) {
+    // 少し動いたらドラッグ（単語を押したことにはしない）。指は多少ぶれるので、マウスより大きめに見る
+    if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > (drag.touch ? 10 : 5)) {
       drag.moved = true;
       mapEl.classList.add('dragging');
     }
-    if (drag.moved) {
+    // スマホでは、ドラッグと決まる前から指に合わせて動かす（動き始めが遅れて見えないように）
+    if (drag.moved || drag.touch) {
       cam.x -= (e.clientX - drag.lx) / cam.z; cam.y -= (e.clientY - drag.ly) / cam.z;
       clampPt(cam);
       render();
     }
     drag.lx = e.clientX; drag.ly = e.clientY;
+    if (drag.track) {
+      drag.track.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
+      while (drag.track.length > 2 && e.timeStamp - drag.track[0].t > 100) drag.track.shift();
+    }
   });
+  // 指の動きをブラウザのスクロール・拡大の判定に回さず、最初からこの画面で受け取る
+  mapEl.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
   const endDrag = (e) => {
     if (!pointers.delete(e.pointerId)) return;
     if (pointers.size === 1) {
       // 2本指から1本指に戻ったら、残った指でドラッグを続ける
       pinch = null;
       const [p] = [...pointers.values()];
-      drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, node: null, moved: true };
+      drag = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, node: null, moved: true, touch: true, track: null };
       return;
     }
     if (pointers.size) return;
@@ -430,6 +459,12 @@
     pinch = null;
     mapEl.classList.remove('dragging');
     if (d && e.type === 'pointerup' && !d.moved && d.node) openFromNode(byId.get(d.node.dataset.id));
+    // スマホで払うように離したら、その速さで少し滑らせる（直前 100ms の動きから速さを出す）
+    else if (d && d.touch && d.moved && d.track && e.type === 'pointerup') {
+      const a = d.track[0], b = d.track[d.track.length - 1];
+      const dt = e.timeStamp - a.t;
+      if (dt > 0 && e.timeStamp - b.t < 60) glide((b.x - a.x) / dt, (b.y - a.y) / dt);
+    }
   };
   mapEl.addEventListener('pointerup', endDrag);
   mapEl.addEventListener('pointercancel', endDrag);
@@ -492,6 +527,11 @@
     q.blur();
     goToWord(w);
   }
+  // 検索欄の外を触ったら検索欄から抜ける（iPhone は、押せない場所を触っても入力中のままになるため）。
+  // スマホで広げた検索欄は、これで元の幅に戻る
+  document.addEventListener('pointerdown', (e) => {
+    if (document.activeElement === q && !e.target.closest('#search')) q.blur();
+  }, true);
   q.addEventListener('input', updateCands);
   q.addEventListener('focus', updateCands);
   q.addEventListener('blur', () => setTimeout(hideCands, 0));
@@ -753,10 +793,17 @@
   const state = { sort: 'kana', dir: 1, mora: null, initial: null, tag: null };
   const listCells = new Map();
   let fitTimer = 0;
-  addEventListener('resize', () => {
+  const refit = () => {
     clearTimeout(fitTimer);
-    fitTimer = setTimeout(() => { if (!listEl.hidden) fitCells(grid); }, 120);
-  });
+    fitTimer = setTimeout(() => {
+      if (!listEl.hidden) fitCells(grid);
+      if (!detail.hidden) fitTitle();
+    }, 120);
+  };
+  addEventListener('resize', refit);
+  // Web フォント（Noto Sans JP）は文字に応じて少しずつ読み込まれ、読み込まれると文字の幅が変わる。
+  // 読み込みの前に測った大きさのままだと枠からはみ出すので、読み込まれるたびに測り直す
+  if (document.fonts) document.fonts.addEventListener('loadingdone', refit);
   const SORT_LABEL = { kana: 'あいう', mora: 'モーラ', link: 'タグリンク数' };
 
   function buildListControls() {
